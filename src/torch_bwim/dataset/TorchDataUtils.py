@@ -22,3 +22,13 @@ class TorchDataUtils(object):
         for i in range(n):
             if (expected_shape[i] is not None) and (t.shape[i] != expected_shape[i]):
                 raise RuntimeError(f'{tensor_name} shape is {t.shape}, expected {expected_shape}')
+
+    @classmethod
+    def concat_datasets_in_dict(cls, clustered_dataset: dict):
+        cluster_sizes = []
+        datasets_to_concat = []
+        for key in clustered_dataset:
+            cluster_sizes.append(len(clustered_dataset[key]))
+            datasets_to_concat.append(clustered_dataset[key])
+        concat_dataset = torch.utils.data.ConcatDataset(datasets_to_concat)
+        return concat_dataset, cluster_sizes

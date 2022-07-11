@@ -25,7 +25,7 @@ class MultiLayerNet(NetBase):
         cfg = config
 
         if activation_function is None:
-            self.activation_function = ActivationFunctions.create_nonlinearity(cfg.activation_function)
+            self.activation_function = ActivationFunctions.create(cfg.activation_function)
         else:
             self.activation_function = activation_function
         self.linear_layers = nn.ModuleList()

@@ -6,10 +6,11 @@ from torch_bwim.helpers.RandomHelper import RandomHelper
 
 class ClusterBasedBatchSampler(torch.utils.data.Sampler):
 
-    def __init__(self, clustered_datasets: list, batch_size: int, shuffle, random_state=None):
+    def __init__(self, cluster_sizes, batch_size: int, shuffle, random_state=None, clustered_datasets=None):
         super().__init__(data_source=None)
         RandomHelper.set_random_state(random_state)
-        cluster_sizes = [len(ds) for ds in clustered_datasets]
+        if cluster_sizes is None:
+            cluster_sizes = [len(ds) for ds in clustered_datasets]
         self.cluster_sizes = cluster_sizes
 
         self.batches = []

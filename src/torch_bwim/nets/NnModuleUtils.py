@@ -25,4 +25,3 @@ class NnModuleUtils(object):
         neuron_counts.extend(hidden_neurons)
         neuron_counts.append(out_size)
         return neuron_counts
-
