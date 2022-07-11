@@ -1,3 +1,4 @@
+from torch_bwim.dataset.DataAugmentationConverter import DataAugmentationConverter
 from torch_bwim.dataset.DictDataset import DictDataset
 from torch_bwim.dataset.ToTensorAdapter import ToTensorAdapter
 
@@ -7,7 +8,7 @@ class TrainDictDataset(DictDataset):
     def __init__(self, dict_dataset,
                  input_to_tensor_adapter: ToTensorAdapter,
                  label_to_tensor_adapter: ToTensorAdapter,
-                 data_augmentation_converter=None):
+                 data_augmentation_converter: DataAugmentationConverter=None):
         super().__init__(dict_dataset=dict_dataset, input_to_tensor_adapter=input_to_tensor_adapter)
         self._label_to_tensor_adapter: ToTensorAdapter = label_to_tensor_adapter
         self._label_feats_range = (self._input_feats_range[1],
