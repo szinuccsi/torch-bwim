@@ -24,7 +24,3 @@ class SchedulerBuilder(object):
             optimizer=optimizer, optimizer_config=optimizer_config,
             scheduler_config=scheduler_config
         )
-
-    @classmethod
-    def create(cls, optimizer, optimizer_config: OptimizerFactoryBase.Config, scheduler_config: SchedulerBase.Config):
-        return SchedulerBuilder.get_instance().create(optimizer, optimizer_config, scheduler_config)

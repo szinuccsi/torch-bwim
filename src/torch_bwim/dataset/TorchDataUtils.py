@@ -1,4 +1,5 @@
 import torch
+import torch.utils.data
 
 
 class TorchDataUtils(object):
@@ -14,21 +15,38 @@ class TorchDataUtils(object):
         return res
 
     @classmethod
-    def check_shape(cls, t: torch.tensor, expected_shape, tensor_name='tensor'):
+    def check_shape(cls, t: torch.tensor, expected_shape, tensor_name='tensor', throw_error=True):
         if len(t.shape) != len(expected_shape):
-            raise RuntimeError(f'{tensor_name} shape len is {len(t.shape)} , '
+            if throw_error:
+                raise RuntimeError(f'{tensor_name} shape len is {len(t.shape)} , '
                                f'expected {len(expected_shape)}')
+            else:
+                return False
         n = len(t.shape)
         for i in range(n):
             if (expected_shape[i] is not None) and (t.shape[i] != expected_shape[i]):
-                raise RuntimeError(f'{tensor_name} shape is {t.shape}, expected {expected_shape}')
+                if throw_error:
+                    raise RuntimeError(f'{tensor_name} shape is {t.shape}, expected {expected_shape}')
+                else:
+                    return False
+        return True
 
     @classmethod
-    def concat_datasets_in_dict(cls, clustered_dataset: dict):
-        cluster_sizes = []
+    def concat_datasets(cls, clustered_datasets):
+        subset_lens = []
         datasets_to_concat = []
-        for key in clustered_dataset:
-            cluster_sizes.append(len(clustered_dataset[key]))
-            datasets_to_concat.append(clustered_dataset[key])
-        concat_dataset = torch.utils.data.ConcatDataset(datasets_to_concat)
-        return concat_dataset, cluster_sizes
+        if isinstance(clustered_datasets, dict):
+            for key in clustered_datasets:
+                d = clustered_datasets[key]
+                subset_lens.append(len(d))
+                datasets_to_concat.append(d)
+            concat_dataset = torch.utils.data.ConcatDataset(datasets_to_concat)
+            return concat_dataset, subset_lens
+        elif isinstance(clustered_datasets, list):
+            for d in clustered_datasets:
+                subset_lens.append(len(d))
+                datasets_to_concat.append(d)
+            concat_dataset = torch.utils.data.ConcatDataset(datasets_to_concat)
+            return concat_dataset, subset_lens
+        else:
+            raise RuntimeError(f'clustered_dataset type is not list or dict ({type(clustered_datasets)})')

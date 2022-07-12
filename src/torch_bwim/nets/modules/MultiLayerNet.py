@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from torch_bwim.NetBase import NetBase
-from torch_bwim.modules.ActivationFunctions import ActivationFunctions
-from torch_bwim.modules.NnModuleUtils import NnModuleUtils
+from torch_bwim.nets.NetBase import NetBase
+from torch_bwim.nets.ActivationFunctions import ActivationFunctions
+from torch_bwim.nets.NnModuleUtils import NnModuleUtils
 
 
 class MultiLayerNet(NetBase):
@@ -25,7 +25,7 @@ class MultiLayerNet(NetBase):
         cfg = config
 
         if activation_function is None:
-            self.activation_function = ActivationFunctions.create(cfg.activation_function)
+            self.activation_function = ActivationFunctions.get_instance().create(cfg.activation_function)
         else:
             self.activation_function = activation_function
         self.linear_layers = nn.ModuleList()
@@ -52,7 +52,7 @@ class MultiLayerNet(NetBase):
             linear_layer = self.linear_layers[i]
             b_norm_layer = self.batch_norm_layers[i]
             t = linear_layer(t)
-            t = self.nonlinearity(t)
+            t = self.activation_function(t)
             t = b_norm_layer(t)
             t = self.dropout_layer(t)
         return t

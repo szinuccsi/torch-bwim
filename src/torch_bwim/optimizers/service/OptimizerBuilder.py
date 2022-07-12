@@ -1,3 +1,4 @@
+from torch_bwim.helpers.PersistHelper import PersistHelper
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 from torch_bwim.optimizers.modules.AdamFactory import AdamFactory
 from torch_bwim.optimizers.modules.SGDFactory import SGDFactory
@@ -6,12 +7,6 @@ from torch_bwim.optimizers.modules.SGDFactory import SGDFactory
 class OptimizerBuilder(object):
 
     _instance = None
-
-    @classmethod
-    def get_config_file(cls, filename=None):
-        if filename is None:
-            return "optimizer_config.json"
-        return filename
 
     @staticmethod
     def get_instance(force_new_instance=False):
@@ -31,18 +26,3 @@ class OptimizerBuilder(object):
     def create(self, parameters, config: OptimizerFactoryBase.Config):
         factory = self.optimizer_factories[config.optimizer_type]
         return factory.create_optimizer(parameters=parameters, config=config)
-
-    @staticmethod
-    def create(parameters, config: OptimizerFactoryBase.Config):
-        return OptimizerBuilder.get_instance().create(parameters, config)
-
-    @classmethod
-    def save_config(cls, optimizer_config: OptimizerFactoryBase.Config, save_folder_path, filename=None):
-        return JsonHelper.save_json(
-            data=optimizer_config,
-            path=os.path.join(save_folder_path, cls.get_config_file(filename))
-        )
-
-    @classmethod
-    def load_config(cls, save_folder_path, filename=None):
-        return JsonHelper.load_json_to_object(path=os.path.join(save_folder_path, cls.get_config_file(filename)))

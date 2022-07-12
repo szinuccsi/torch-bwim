@@ -20,8 +20,7 @@ class ActivationFunctions(object):
                     ActivationFunctions.Types.ReLU: nn.ReLU,
                     ActivationFunctions.Types.LeakyReLU: nn.LeakyReLU,
                     ActivationFunctions.Types.Sigmoid: nn.Sigmoid,
-                    ActivationFunctions.Types.Tanh: nn.Tanh,
-                    ActivationFunctions.Types.Sinh: nn.Sinh
+                    ActivationFunctions.Types.Tanh: nn.Tanh
                 }
             )
         return ActivationFunctions._instance
@@ -32,6 +31,10 @@ class ActivationFunctions(object):
 
     def create(self, key: str) -> nn.Module:
         return self.activation_function_map[key]()
+
+    @classmethod
+    def get_function(cls, key: str):
+        return cls.get_instance().create(key)
 
     def register_activation_function(self, key: str, function_factory):
         self.activation_function_map[key] = function_factory

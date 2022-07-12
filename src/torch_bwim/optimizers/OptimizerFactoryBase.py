@@ -1,3 +1,6 @@
+from torch_bwim.helpers.PersistHelper import PersistHelper
+
+
 class OptimizerFactoryBase(object):
 
     class Config(object):
@@ -12,3 +15,24 @@ class OptimizerFactoryBase(object):
 
     def create(self, parameters, config: Config):
         pass
+
+    class PersistConfig(object):
+        def __init__(self, filename = 'optimizer.json'):
+            super().__init__()
+            self.filename = filename
+    @classmethod
+    def save_config(cls, optimizer_config: Config, folder_path, persist_config: PersistConfig=None):
+        if persist_config is None:
+            persist_config = cls.PersistConfig()
+        return PersistHelper.save_object_to_json(
+            data=optimizer_config,
+            path=PersistHelper.merge_paths([folder_path, persist_config.filename])
+        )
+
+    @classmethod
+    def load_config(cls, folder_path, persist_config: PersistConfig=None):
+        if persist_config is None:
+            persist_config = cls.PersistConfig()
+        return PersistHelper.load_json_to_object(
+            path=PersistHelper.merge_paths([folder_path, persist_config.filename])
+        )

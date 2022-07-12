@@ -1,3 +1,5 @@
+from torch.utils.data import Dataset
+
 from torch_bwim.dataset.DictDataset import DictDataset
 from torch_bwim.dataset.batch_samplers.DatasetMapper import DatasetMapper
 

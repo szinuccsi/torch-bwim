@@ -1,16 +1,15 @@
 import random
 import torch.utils.data
 
+from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 from torch_bwim.helpers.RandomHelper import RandomHelper
 
 
 class ClusterBasedBatchSampler(torch.utils.data.Sampler):
 
-    def __init__(self, cluster_sizes, batch_size: int, shuffle, random_state=None, clustered_datasets=None):
+    def __init__(self, cluster_sizes, batch_size: int, shuffle, random_state=None):
         super().__init__(data_source=None)
         RandomHelper.set_random_state(random_state)
-        if cluster_sizes is None:
-            cluster_sizes = [len(ds) for ds in clustered_datasets]
         self.cluster_sizes = cluster_sizes
 
         self.batches = []

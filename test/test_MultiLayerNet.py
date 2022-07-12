@@ -1,8 +1,9 @@
 import unittest
+import torch
 import torch.nn as nn
 
 from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
-from torch_bwim.modules.MultiLayerNet import MultiLayerNet
+from torch_bwim.nets.modules.MultiLayerNet import MultiLayerNet
 
 
 class MultiLayerNetTestCase(unittest.TestCase):
@@ -36,7 +37,7 @@ class MultiLayerNetTestCase(unittest.TestCase):
                 in_size=self.INPUT_SIZE, out_size=self.OUT_SIZE,
                 hidden_neurons=self.HIDDEN_NEURONS,
             ),
-            activation_function=nn.LeakyRelu()
+            activation_function=nn.LeakyReLU()
         )
         in_tensor = torch.randn(self.INPUT_SHAPE)
         out_tensor = net.forward(in_tensor)
