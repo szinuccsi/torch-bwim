@@ -12,8 +12,8 @@ class NullScheduler(SchedulerBase):
         def get_scheduler_type(cls):
             return 'NullScheduler'
 
-    def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, scheduler_config: Config):
-        super().__init__(optimizer=optimizer, optimizer_config=optimizer_config, scheduler_config=scheduler_config)
+    def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, config: Config):
+        super().__init__(optimizer=optimizer, optimizer_config=optimizer_config, config=config)
 
     def step(self, batch_size, t: torch.Tensor=None):
         pass

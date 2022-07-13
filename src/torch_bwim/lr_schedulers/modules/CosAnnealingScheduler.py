@@ -14,9 +14,9 @@ class CosAnnealingScheduler(SchedulerBase):
         def get_scheduler_type(cls):
             return 'CosAnnealingScheduler'
 
-    def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, scheduler_config: Config):
-        super().__init__(optimizer=optimizer, optimizer_config=optimizer_config, scheduler_config=scheduler_config)
-        self.scheduler_config = scheduler_config
+    def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, config: Config):
+        super().__init__(optimizer=optimizer, optimizer_config=optimizer_config, config=config)
+        self.scheduler_config = config
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, self.scheduler_config.annealing_period_in_steps,
             eta_min=optimizer_config.learning_rate * self.scheduler_config.lr_ratio

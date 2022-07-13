@@ -10,18 +10,18 @@ class DatasetMapper(object):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, dataset: Dataset, full_dataset: DictDataset, batch_size, shuffle, random_state=None):
-        clustered_datasets = self.map_samples(dataset, full_dataset)
+    def __call__(self, dataset: Dataset, dataset_provider: DictDataset, batch_size, shuffle, random_state=None):
+        clustered_datasets = self.map_samples(dataset, dataset_provider)
         concat_clustered_datasets, cluster_sizes = TorchDataUtils.concat_datasets(clustered_datasets)
         batch_sampler = ClusterBasedBatchSampler(cluster_sizes=cluster_sizes,
                                                  batch_size=batch_size, shuffle=shuffle, random_state=random_state)
         return concat_clustered_datasets, batch_sampler
 
-    def map_samples(self, dataset: Dataset, full_dataset: DictDataset):
+    def map_samples(self, dataset: Dataset, dataset_provider: DictDataset):
         clustered_dataset = {}
         for data in dataset:
             index = int(data[0])
-            key = self.key_of_sample(dataset=dataset, full_dataset=full_dataset, index=index)
+            key = self.key_of_sample(dataset=dataset, full_dataset=dataset_provider, index=index)
             self._add_element_to_array_in_dict(clustered_dataset, key=key, element=data)
         return clustered_dataset
 

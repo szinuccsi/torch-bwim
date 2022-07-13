@@ -1,3 +1,5 @@
+from torch import optim
+
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 
 
@@ -13,9 +15,6 @@ class AdamFactory(OptimizerFactoryBase):
         def get_optimizer_type(cls) -> str:
             return 'Adam'
 
-    '''
-        https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
-    '''
     def create_optimizer(self, parameters, config):
         return optim.Adam(parameters, lr=config.learning_rate, weight_decay=config.weight_decay,
                           amsgrad=config.amsgrad)

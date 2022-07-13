@@ -26,3 +26,7 @@ class OptimizerBuilder(object):
     def create(self, parameters, config: OptimizerFactoryBase.Config):
         factory = self.optimizer_factories[config.optimizer_type]
         return factory.create_optimizer(parameters=parameters, config=config)
+
+    @classmethod
+    def create_optimizer(cls, parameters, config: OptimizerFactoryBase.Config):
+        cls.get_instance().create(parameters, config=config)

@@ -17,9 +17,10 @@ class OptimizerFactoryBase(object):
         pass
 
     class PersistConfig(object):
-        def __init__(self, filename = 'optimizer.json'):
+        def __init__(self, filename: str=None):
             super().__init__()
-            self.filename = filename
+            self.filename = filename if filename is not None else 'optimizer.json'
+
     @classmethod
     def save_config(cls, optimizer_config: Config, folder_path, persist_config: PersistConfig=None):
         if persist_config is None:

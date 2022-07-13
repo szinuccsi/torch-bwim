@@ -1,4 +1,5 @@
 from torch_bwim.dataset.ToTensorAdapter import ToTensorAdapter
+from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 
 
 class DictDataset(object):
@@ -29,9 +30,15 @@ class DictDataset(object):
         res = (index,) + inputs
         return res
 
+    def to_index(self, tensors, cuda=False):
+        return TorchDataUtils.to_device(tensors[0], cuda=cuda)
+
+    def to_input(self, tensors, cuda=False):
+        return TorchDataUtils.to_device(tensors[self.input_feats_range[0]:self.input_feats_range[1]], cuda=cuda)
+
     def get_input(self, index):
         res = self.__getitem__(index)
-        return res[self.input_feats_range[0]:self.input_feats_range[1]]
+        return self.to_input(res)
 
     def _get_input_feats_range(self):
         if self._input_feats_range is None:

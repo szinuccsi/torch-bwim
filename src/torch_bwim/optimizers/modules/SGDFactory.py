@@ -1,3 +1,5 @@
+from torch import optim
+
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 
 

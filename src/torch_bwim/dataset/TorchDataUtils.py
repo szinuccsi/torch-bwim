@@ -1,5 +1,6 @@
 import torch
 import torch.utils.data
+from torch.utils.data import Dataset
 
 
 class TorchDataUtils(object):
@@ -50,3 +51,20 @@ class TorchDataUtils(object):
             return concat_dataset, subset_lens
         else:
             raise RuntimeError(f'clustered_dataset type is not list or dict ({type(clustered_datasets)})')
+
+    @classmethod
+    def cuda_is_available(cls, cuda=True):
+        return torch.cuda.is_available() and cuda
+
+    @classmethod
+    def to_device(cls, t: torch.Tensor, cuda=True):
+        if (not isinstance(t, list)) and (not isinstance(t, tuple)):
+            return t.cuda() if cls.cuda_is_available() else t
+        if not isinstance(cuda, list):
+            cuda = [cuda for _ in range(len(t))]
+        if len(cuda) != len(t):
+            raise RuntimeError(f'len(cuda)({len(cuda)}) != len(t)({len(t)})')
+        t = [cls.to_device(t[i], cuda[i]) for i in range(len(t))]
+        if isinstance(t, tuple):
+            return tuple(t)
+        return t

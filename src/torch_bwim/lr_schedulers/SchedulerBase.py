@@ -1,9 +1,10 @@
 import torch
 
+from torch_bwim.helpers.SerializableAlg import SerializableAlg
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 
 
-class SchedulerBase(object):
+class SchedulerBase(SerializableAlg):
 
     class Config(object):
         def __init__(self, scheduler_type: str, step_period):
@@ -14,20 +15,20 @@ class SchedulerBase(object):
         def get_scheduler_type(self):
             raise RuntimeError(f'Invalid scheduler type (SchedulerBase)')
 
-    def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, scheduler_config: Config):
+    def __init__(self, config: Config, optimizer, optimizer_config: OptimizerFactoryBase.Config):
         super().__init__()
+        self.config = config
         self.optimizer = optimizer
         self.optimizer_config = optimizer_config
-        self.scheduler_config = scheduler_config
 
         self.counter = 0
         self.scheduler = None
 
-    def step(self, batch_size, t: torch.Tensor=None):
+    def step(self, batch_size=None, t: torch.Tensor=None):
         if batch_size is None:
             batch_size = t.size(dim=0)
         self.counter += batch_size
-        if 0 < (self.counter // self.scheduler_config.step_period):
+        if 0 < (self.counter // self.config.step_period):
             self.scheduler.step()
 
     def get_last_lr(self):
