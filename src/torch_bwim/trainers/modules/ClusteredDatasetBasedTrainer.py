@@ -12,7 +12,8 @@ class ClusteredDatasetBasedTrainer(StandardNetTrainer):
 
     class Config(StandardNetTrainer.Config):
         def __init__(self, batch_size, shuffle_dataset, epoch_num=None, random_state=None):
-            super().__init__(batch_size, shuffle_dataset, epoch_num=None, random_state=None)
+            super().__init__(batch_size=batch_size, shuffle_dataset=shuffle_dataset,
+                             epoch_num=epoch_num, random_state=random_state)
 
     class State(StandardNetTrainer.State):
         def __init__(self, train_config=None, loss=None,

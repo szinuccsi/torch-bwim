@@ -61,7 +61,7 @@ class StandardNetTrainer(NetTrainerBase):
         self.best_state: StandardNetTrainer.State = self.State()
 
         self.dataset_provider: TrainDictDataset = None
-        self.criterion = None
+        self.loss_function = None
         self.loss_plotter: LossPlotter = None
         self.learning_rate_plotter: LearningRatePlotter = None
         self.cuda = True
@@ -69,7 +69,7 @@ class StandardNetTrainer(NetTrainerBase):
     def initialize(self,
                    net: NetBase,
                    train_dataset, val_dataset, dataset_provider: TrainDictDataset,
-                   criterion,
+                   loss_function,
                    scheduler_config: SchedulerBase.Config, optimizer_config: OptimizerFactoryBase.Config,
                    cuda=True,
                    loss_plotter=None, learning_rate_plotter=None):
@@ -77,7 +77,7 @@ class StandardNetTrainer(NetTrainerBase):
         self.train_loader = self.dataset_to_loader(train_dataset)
         self.val_loader = self.dataset_to_loader(val_dataset)
         self.dataset_provider: TrainDictDataset = dataset_provider
-        self.criterion = criterion
+        self.loss_function = loss_function
         self.loss_plotter = \
             loss_plotter if loss_plotter is not None else LossPlotter()
         self.learning_rate_plotter = \
@@ -125,7 +125,7 @@ class StandardNetTrainer(NetTrainerBase):
             with torch.no_grad():
                 outputs = self.process(inputs=inputs, index=index)
                 outputs_and_labels = outputs + labels
-                loss = self.criterion(*outputs_and_labels)
+                loss = self.loss_function(*outputs_and_labels)
                 loss_summary.add(loss.item(), t=index)
         return loss_summary.loss
 
@@ -145,7 +145,7 @@ class StandardNetTrainer(NetTrainerBase):
             self.zero_grad()
             outputs = self.process(inputs=inputs, index=index)
             outputs_and_labels = outputs + labels
-            loss = self.criterion(*outputs_and_labels)
+            loss = self.loss_function(*outputs_and_labels)
             self.backpropagation(loss=loss)
             self.scheduler.step(t=index)
             self.learning_rate_plotter.add(self.scheduler.get_last_lr())
