@@ -1,3 +1,5 @@
+import torch.optim
+
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 

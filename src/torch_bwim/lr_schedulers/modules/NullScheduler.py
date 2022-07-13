@@ -1,3 +1,5 @@
+import torch
+
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 
@@ -15,7 +17,7 @@ class NullScheduler(SchedulerBase):
     def __init__(self, optimizer, optimizer_config: OptimizerFactoryBase.Config, config: Config):
         super().__init__(optimizer=optimizer, optimizer_config=optimizer_config, config=config)
 
-    def step(self, batch_size, t: torch.Tensor=None):
+    def step(self, batch_size=None, t: torch.Tensor=None):
         pass
 
     def get_last_lr(self):

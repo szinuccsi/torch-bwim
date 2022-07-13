@@ -30,7 +30,7 @@ class TrainDictDataset(DictDataset):
         return res
 
     def to_label(self, tensors, cuda=False):
-        return TorchDataUtils.to_device(tensors[self.label_feats_range[0]: self.label_feats_range[1]], cuda=cuda)
+        return tuple(TorchDataUtils.to_device(tensors[self.label_feats_range[0]: self.label_feats_range[1]], cuda=cuda))
 
     def get_label(self, index):
         res = self.__getitem__(index)

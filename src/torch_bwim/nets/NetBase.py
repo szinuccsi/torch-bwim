@@ -26,6 +26,12 @@ class NetBase(nn.Module):
         self.config = config
         RandomHelper.set_random_state(random_state=random_state)
 
+    def __call__(self, *args, **kwargs):
+        res = self.forward(*args, **kwargs)
+        if not isinstance(res, tuple):
+            res = res,
+        return res
+
     class PersistConfig(object):
         def __init__(self, nn_weight_filename='state_dict.pth', nn_config_filename='net_config.json'):
             super().__init__()

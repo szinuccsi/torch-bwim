@@ -29,4 +29,4 @@ class OptimizerBuilder(object):
 
     @classmethod
     def create_optimizer(cls, parameters, config: OptimizerFactoryBase.Config):
-        cls.get_instance().create(parameters, config=config)
+        return cls.get_instance().create(parameters, config=config)

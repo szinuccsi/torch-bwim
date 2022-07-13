@@ -12,8 +12,14 @@ class ToTensorAdapter(SerializableAlg):
         super().__init__(config=config)
         self._length_out = length_out
 
-    def __call__(self, data: dict) -> tuple:
+    def process(self, data: dict):
         pass
+
+    def __call__(self, data: dict) -> tuple:
+        res = self.process(data)
+        if not isinstance(res, tuple):
+            res = res,
+        return res
 
     def __len__(self):
         return self._length_out

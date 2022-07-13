@@ -1,3 +1,5 @@
+from torch_bwim.lr_schedulers.modules.CosAnnealingScheduler import CosAnnealingScheduler
+from torch_bwim.lr_schedulers.modules.NullScheduler import NullScheduler
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 
@@ -15,6 +17,8 @@ class SchedulerBuilder(object):
     def __init__(self):
         super().__init__()
         self.scheduler_class = {}
+        self.register_scheduler(CosAnnealingScheduler)
+        self.register_scheduler(NullScheduler)
 
     def register_scheduler(self, cls):
         self.scheduler_class[cls.Config.get_scheduler_type()] = cls

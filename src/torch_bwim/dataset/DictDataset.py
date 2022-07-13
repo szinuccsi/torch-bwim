@@ -34,7 +34,7 @@ class DictDataset(object):
         return TorchDataUtils.to_device(tensors[0], cuda=cuda)
 
     def to_input(self, tensors, cuda=False):
-        return TorchDataUtils.to_device(tensors[self.input_feats_range[0]:self.input_feats_range[1]], cuda=cuda)
+        return tuple(TorchDataUtils.to_device(tensors[self.input_feats_range[0]:self.input_feats_range[1]], cuda=cuda))
 
     def get_input(self, index):
         res = self.__getitem__(index)

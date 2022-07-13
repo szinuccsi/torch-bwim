@@ -1,10 +1,12 @@
 import copy
+import datetime
 
 import torch
 from torch.utils.data import Dataset, DataLoader
 
 from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 from torch_bwim.dataset.TrainDictDataset import TrainDictDataset
+from torch_bwim.helpers.RandomHelper import RandomHelper
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 from torch_bwim.lr_schedulers.service.SchedulerBuilder import SchedulerBuilder
 from torch_bwim.nets.NetBase import NetBase
@@ -62,6 +64,7 @@ class StandardNetTrainer(NetTrainerBase):
         self.criterion = None
         self.loss_plotter: LossPlotter = None
         self.learning_rate_plotter: LearningRatePlotter = None
+        self.cuda = True
 
     def initialize(self,
                    net: NetBase,
@@ -83,6 +86,7 @@ class StandardNetTrainer(NetTrainerBase):
         self.optimizer = OptimizerBuilder.create_optimizer(parameters=self.net.parameters(), config=optimizer_config)
         self.scheduler = SchedulerBuilder.create_scheduler(config=scheduler_config,
                                                            optimizer=self.optimizer, optimizer_config=optimizer_config)
+        self.cuda = cuda
 
     def dataset_to_loader(self, dataset):
         if isinstance(dataset, list):
@@ -90,17 +94,21 @@ class StandardNetTrainer(NetTrainerBase):
         return DataLoader(dataset,
                           batch_size=self.train_config.batch_size,
                           shuffle=self.train_config.shuffle_dataset,
-                          generator=torch.Generator.seed(self.train_config.random_state))
+                          generator=RandomHelper.get_generator(self.train_config.random_state))
 
     def train(self, epoch_num=None, persist_config: PersistConfig=None,
               plot_required=True):
         super().train()
         self.epoch_num = epoch_num
         for epoch in range(self.epoch_num):
+            self.logger(f'Epoch {epoch+1} started at {datetime.datetime.now()}')
             train_loss = self.train_epoch(data_loader=self.train_loader)
             val_loss = self.validate(data_loader=self.val_loader)
             self.loss_plotter.add(train_loss=train_loss, val_loss=val_loss)
             self.best_result(loss=val_loss, persist_config=persist_config)
+            self.logger(f'\tTrain loss: {train_loss}')
+            self.logger(f'\tValidation loss: {val_loss}')
+            self.logger(f'\tLowest loss: {self.best_state.loss}')
         self.loss_plotter.plot(required=plot_required)
         self.learning_rate_plotter.plot(required=plot_required)
         return self.best_state.loss
@@ -111,9 +119,9 @@ class StandardNetTrainer(NetTrainerBase):
             data_loader = self.dataset_to_loader(data_loader)
         loss_summary = LossSummary()
         for i, data in enumerate(data_loader):
-            index = self.dataset_provider.to_index(data)
-            inputs = self.dataset_provider.to_input(data)
-            labels = self.dataset_provider.to_label(data)
+            index = self.dataset_provider.to_index(data, cuda=self.cuda)
+            inputs = self.dataset_provider.to_input(data, cuda=self.cuda)
+            labels = self.dataset_provider.to_label(data, cuda=self.cuda)
             with torch.no_grad():
                 outputs = self.process(inputs=inputs, index=index)
                 outputs_and_labels = outputs + labels
@@ -122,7 +130,8 @@ class StandardNetTrainer(NetTrainerBase):
         return loss_summary.loss
 
     def process(self, inputs, index=None):
-        return self.net(*inputs)
+        outputs = self.net(*inputs)
+        return outputs
 
     def train_epoch(self, data_loader):
         if isinstance(data_loader, Dataset):
@@ -130,9 +139,9 @@ class StandardNetTrainer(NetTrainerBase):
         self.net.train()
         loss_summary = LossSummary()
         for i, data in enumerate(data_loader):
-            index = self.dataset_provider.to_index(data)
-            inputs = self.dataset_provider.to_input(data)
-            labels = self.dataset_provider.to_label(data)
+            index = self.dataset_provider.to_index(data, cuda=self.cuda)
+            inputs = self.dataset_provider.to_input(data, cuda=self.cuda)
+            labels = self.dataset_provider.to_label(data, cuda=self.cuda)
             self.zero_grad()
             outputs = self.process(inputs=inputs, index=index)
             outputs_and_labels = outputs + labels
@@ -152,7 +161,8 @@ class StandardNetTrainer(NetTrainerBase):
         self.best_state.scheduler_config = copy.deepcopy(self.scheduler.config)
 
     def backpropagation(self, loss):
-        pass
+        loss.backward()
+        self.optimizer.step()
 
     def save(self, persist_config: PersistConfig, with_weights=True):
         if not super().save(persist_config=persist_config, with_weights=with_weights):
