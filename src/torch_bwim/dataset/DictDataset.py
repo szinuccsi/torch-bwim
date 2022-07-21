@@ -30,11 +30,12 @@ class DictDataset(object):
         res = (index,) + inputs
         return res
 
-    def to_index(self, tensors, cuda=False):
-        return TorchDataUtils.to_device(tensors[0], cuda=cuda)
+    def to_index(self, tensors, device=None, cuda: bool=None):
+        return TorchDataUtils.move_to(tensors[0], device=device, cuda=cuda)
 
-    def to_input(self, tensors, cuda=False):
-        return tuple(TorchDataUtils.to_device(tensors[self.input_feats_range[0]:self.input_feats_range[1]], cuda=cuda))
+    def to_input(self, tensors, device=None, cuda: bool=None):
+        return tuple(TorchDataUtils.move_to(tensors[self.input_feats_range[0]:self.input_feats_range[1]],
+                                            device=device, cuda=cuda))
 
     def get_input(self, index):
         res = self.__getitem__(index)

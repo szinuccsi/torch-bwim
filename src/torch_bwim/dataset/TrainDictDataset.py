@@ -29,8 +29,9 @@ class TrainDictDataset(DictDataset):
         res = (index,) + inputs + labels
         return res
 
-    def to_label(self, tensors, cuda=False):
-        return tuple(TorchDataUtils.to_device(tensors[self.label_feats_range[0]: self.label_feats_range[1]], cuda=cuda))
+    def to_label(self, tensors, device=None, cuda=None):
+        return tuple(TorchDataUtils.move_to(tensors[self.label_feats_range[0]: self.label_feats_range[1]],
+                                            device=device, cuda=cuda))
 
     def get_label(self, index):
         res = self.__getitem__(index)
