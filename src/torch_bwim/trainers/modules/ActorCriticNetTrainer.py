@@ -1,5 +1,6 @@
 import gym
 
+from torch_bwim.loss_functions.reinforcement_learning.ReinforcementLoss import ReinforcementLoss
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 from torch_bwim.lr_schedulers.service.SchedulerBuilder import SchedulerBuilder
 from torch_bwim.nets.NetBase import NetBase
@@ -15,9 +16,9 @@ class ActorCriticNetTrainer(NetTrainerBase):
 
     class Config(NetTrainerBase.Config):
         def __init__(self, episode_num=None, max_iter_in_episode=None, random_state=None):
-            super(self).__init__(random_state=random_state)
+            super().__init__(random_state=random_state)
             self.episode_num = episode_num
-            self.max_iter_in_episode = None
+            self.max_iter_in_episode = max_iter_in_episode
 
     def __init__(self, train_config: Config, logger=None):
         super().__init__(train_config=train_config, logger=logger)
@@ -29,13 +30,14 @@ class ActorCriticNetTrainer(NetTrainerBase):
         self.loss_plotter = None
         self.optimizer_config = None
         self.optimizer = None
-        self.scheduler = None
+        self.scheduler: SchedulerBase = None
         self.cuda = None
 
         self.rewards = []
+        self.metric_value = 0.0
 
     def initialize(self, net: ActorCriticNetBase,
-                   env: gym.Env, loss_function,
+                   env: gym.Env, loss_function: ReinforcementLoss,
                    scheduler_config: SchedulerBase.Config, optimizer_config: OptimizerFactoryBase.Config,
                    cuda=True,
                    loss_plotter=None, learning_rate_plotter=None):
@@ -72,7 +74,9 @@ class ActorCriticNetTrainer(NetTrainerBase):
         self.episode_num = episode_num
         self.max_iter_in_episode = max_iter_in_episode
         for i_episode in range(episode_num):
-            self.episode_process()
+            metric_value = self.episode_process()
+            self.metric_value = 0.95 * self.metric_value + 0.05 * metric_value
+            self.logger(i_episode, f'step - {self.metric_value} metric value')
 
     def reset(self):
         state = self.env.reset()
@@ -86,5 +90,11 @@ class ActorCriticNetTrainer(NetTrainerBase):
         for i in range(self.max_iter_in_episode):
             action = self.net(state)
             state, reward, done, extra_info = self.env.step(action)
+            self.rewards.append(reward)
             if done:
                 break
+        loss = self.loss_function(self.net.history, self.rewards)
+        loss.backward()
+        self.optimizer.step()
+        self.scheduler.step(batch_size=1) # TODO
+        return len(self.net.history)
