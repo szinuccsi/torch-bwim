@@ -48,7 +48,7 @@ class Interpolator1DTestCase(unittest.TestCase):
         torch_f = self.torch_interpolator.forward(NnModuleUtils.from_array(x))
         TorchDataUtils.check_shape(torch_f, expected_shape=x.shape)
         plt.plot(x, np_f, label='numpy')
-        plt.plot(x, torch_f.numpy(), label='torch')
+        plt.plot(x, torch_f.detach().numpy(), label='torch')
         plt.legend()
         plt.show()
 
@@ -109,20 +109,16 @@ class Interpolator1DTestCase(unittest.TestCase):
         torch_x = NnModuleUtils.from_array(np_x)
         torch_x.requires_grad = True
         torch_f = self.torch_interpolator.forward(torch_x)
-        loss = torch.sum(torch.sum(torch_f, dim=0), dim=1)
+        loss = torch.sum(torch.sum(torch_f))
         loss.backward()
 
         torch_grad_f = torch_x.grad
 
-        plt.plot(np_x, np_grad_f, label='numpy')
-        plt.plot(np_x, torch_grad_f.numpy(), label='torch')
-        plt.legend()
-        plt.show()
-
-        exp_f = np_grad_f.tolist()
-        act_f = torch_grad_f.detach().numpy().tolist()
-        for i in range(len(act_f)):
-            self.assertAlmostEqual(act_f[i], exp_f[i], delta=self.epsilon)
+        exp_f = np_grad_f
+        act_f = torch_grad_f.detach().numpy()
+        for i in range(act_f.shape[0]):
+            for j in range(act_f.shape[1]):
+                self.assertAlmostEqual(act_f[i][j], exp_f[i][j], delta=self.epsilon)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 from torch.autograd import Function
@@ -6,146 +8,89 @@ from torch.autograd import Function
 class RectiBilinearInterpolateFunction(Function):
 
     '''
-        xs: shape: (num of points to interpolate)
-        ys: shape: (num of points to interpolate)
-        ctrl_xs: (distinct y coords, distinct x coords)
-        ctrl_ys: (distinct y coords, distinct x coords)
-        ctrl_values: (influence surfaces, distinct y coords, distinct x coords)
-        distinct_xs: (num of distinct x coords) - sorted
-        distinct_ys: (num of distinct y coords) - sorted
-        ctrl_gradient_x: (influence surfaces, distinct y coords, distinct x coords)
-        ctrl_gradient_y: (influence surfaces, distinct y coords, distinct x coords)
-        method: 'linear' or 'nearest'
+        x: shape(num of points to interpolate)
+        y: shape(num of points to interpolate)
+        fp: shape(distinct y coords; distinct x coords; grid count)
+        xp: (distinct y coords; distinct x coords)
+        yp: (distinct y coords; distinct x coords)
+        distinct_xp: (num of distinct x coords) - sorted
+        distinct_yp: (num of distinct y coords) - sorted
+        grad_x_fp: (grid count; distinct y coords; distinct x coords)
+        grad_y_fp: (grid count; distinct y coords; distinct x coords)
+        method: 'linear', 'farthest' or 'nearest'
     '''
     @staticmethod
-    def forward(ctx, xs, ys, ctrl_values,
-                distinct_xs, distinct_ys,
-                ctrl_gradient_x=None, ctrl_gradient_y=None,
-                method='linear'):
-        ctx.save_for_backward(xs, ys)
-        ctx.ctrl_values = ctrl_values
-        ctx.distinct_xs, ctx.distinct_ys = distinct_xs, distinct_ys
-        ctx.ctrl_gradient_x, ctx.ctrl_gradient_y = ctrl_gradient_x, ctrl_gradient_y
+    def forward(ctx, x: torch.Tensor, y: torch.Tensor,
+                fp: torch.Tensor,
+                distinct_xp: torch.Tensor, distinct_yp: torch.Tensor,
+                grad_x_fp=None, grad_y_fp=None, method='linear'):
+        ctx.save_for_backward(x, y)
+        fp = torch.flatten(fp, start_dim=0, end_dim=-2)
+        grid_cnt = fp.shape[-1]
 
-        xs, ys = torch.flatten(xs, start_dim=0), torch.flatten(ys, start_dim=0)
-        ctrl_values = torch.flatten(ctrl_values, start_dim=1)
-        infl_surf_cnt = ctrl_values.shape[0]
-        x_indices = RectiBilinearInterpolateFunction._searchsorted(distinct_xs, xs)
-        y_indices = RectiBilinearInterpolateFunction._searchsorted(distinct_ys, ys)
+        x_idxs_in_distinct = torch.searchsorted(distinct_xp, x, right=True)
+        y_idxs_in_distinct = torch.searchsorted(distinct_yp, y, right=True)
 
-        x_len = distinct_xs.shape[0]
+        x_len, y_len = distinct_xp.shape[0], distinct_yp.shape[0]
 
-        x_idxs = [
-            torch.clamp(x_indices-1.0, min=0, max=len(distinct_xs)-1).int(),
-            torch.clamp(x_indices, min=0, max=len(distinct_xs)-1).int()
-        ]
+        x_idxs_in_dictinct = [torch.clamp(x_idxs_in_distinct - 1.0, min=0, max=x_len - 1).int(),
+                              torch.clamp(x_idxs_in_distinct, min=0, max=x_len - 1).int()]
+        y_idxs_in_distinct = [torch.clamp(y_idxs_in_distinct - 1.0, min=0, max=y_len - 1).int(),
+                              torch.clamp(y_idxs_in_distinct, min=0, max=y_len - 1).int()]
 
-        y_idxs = [
-            torch.clamp(y_indices-1.0, min=0, max=len(distinct_ys)-1).int(),
-            torch.clamp(y_indices, min=0, max=len(distinct_ys)-1).int()
-        ]
+        xp_values = [torch.index_select(distinct_xp, dim=0, index=x_idxs_in_dictinct[i]) for i in range(2)]
+        yp_values = [torch.index_select(distinct_yp, dim=0, index=y_idxs_in_distinct[i]) for i in range(2)]
 
-        x = [torch.index_select(distinct_xs, dim=0, index=x_idxs[i]) for i in range(2)]
-        y = [torch.index_select(distinct_ys, dim=0, index=y_idxs[i]) for i in range(2)]
+        rectangle_idxs = [[x_idxs_in_dictinct[i] + y_idxs_in_distinct[j] * x_len for j in range(2)]
+                          for i in range(2)]
+        fp_values = [[torch.index_select(fp, dim=0, index=rectangle_idxs[i][j]) for j in range(2)]
+                     for i in range(2)]
 
-        indices = [[x_idxs[i] + y_idxs[j] * x_len for j in range(2)] for i in range(2)]
-
-        f = [[torch.index_select(ctrl_values, dim=1, index=indices[i][j])
-                     for j in range(2)] for i in range(2)]
-
-        w_interp = [[torch.abs((x[1-i] - xs) * (y[1-j] - ys)) for j in range(2)] for i in range(2)]
-        w_interp = [[torch.stack([w_interp[i][j] for _ in range(infl_surf_cnt)]) for j in range(2)] for i in range(2)]
-        ctx.w_interp = w_interp
+        w_interp = [[torch.abs((xp_values[1-i] - x) * (yp_values[1 - j] - y)) for j in range(2)]
+                    for i in range(2)]
+        w_interp = [[torch.stack([w_interp[i][j] for _ in range(grid_cnt)], dim=1) for j in range(2)]
+                    for i in range(2)]
+        ctx.distinct_xp, ctx.distinct_yp = distinct_xp, distinct_yp
+        ctx.grad_x_fp, ctx.grad_y_fp = grad_x_fp, grad_y_fp
+        ctx.fp = fp
         if method == 'linear':
-            output = RectiBilinearInterpolateFunction._bilinear_interp(f, w_interp)
-            output = RectiBilinearInterpolateFunction._out_of_bounds_values(output, distinct_xs, xs)
-            output = RectiBilinearInterpolateFunction._out_of_bounds_values(output, distinct_ys, ys)
+            output = RectiBilinearInterpolateFunction.bilinear_interp(fp_values, w_interp)
+            output = RectiBilinearInterpolateFunction.out_of_bounds_values(output, distinct_xp, x)
+            output = RectiBilinearInterpolateFunction.out_of_bounds_values(output, distinct_yp, y)
             return output
         elif method == 'nearest':
-            output = RectiBilinearInterpolateFunction._nearest_interp(f, w_interp)
+            output = RectiBilinearInterpolateFunction.nearest_interp(fp_values, w_interp)
             return output
         elif method == 'farthest':
-            output = RectiBilinearInterpolateFunction._farthest_interp(f, w_interp)
+            output = RectiBilinearInterpolateFunction.farthest_interp(fp_values, w_interp)
             return output
         else:
             raise RuntimeError(f'Invalid interpolation method({method})')
 
     @staticmethod
     def backward(ctx, grad_output):
-        w_interp = ctx.w_interp
-        xs, ys = ctx.saved_tensors
-        ctrl_values = ctx.ctrl_values
-        distinct_xs, distinct_ys = ctx.distinct_xs, ctx.distinct_ys
-        ctrl_gradient_x, ctrl_gradient_y = ctx.ctrl_gradient_x, ctx.ctrl_gradient_y
-        if (ctrl_gradient_x is None) or (ctrl_gradient_y is None):
-            ctrl_gradient_x, ctrl_gradient_y = RectiBilinearInterpolateFunction.gradient_create(
-                ctrl_values, distinct_xs, distinct_ys
+        x, y = ctx.saved_tensors
+        fp = ctx.fp
+        distinct_xp, distinct_yp = ctx.distinct_xp, ctx.distinct_yp
+        grad_x_fp, grad_y_fp = ctx.grad_x_fp, ctx.grad_y_fp
+        if (grad_x_fp is None) or (grad_y_fp is None):
+            grad_x_fp, grad_y_fp = RectiBilinearInterpolateFunction.gradient_create(
+                fp=fp, distinct_xp=distinct_xp, distinct_yp=distinct_yp
             )
-        RectiBilinearInterpolateFunction._check_backward(distinct_xs, distinct_ys, ctrl_values,
-                                                         ctrl_gradient_x, ctrl_gradient_y)
         forward = RectiBilinearInterpolateFunction.apply
-        gradient_x = forward(xs, ys, ctrl_gradient_x,
-                             distinct_xs, distinct_ys,
-                             None, None, 'linear')
-        gradient_y = forward(xs, ys, ctrl_gradient_y,
-                             distinct_xs, distinct_ys,
-                             None, None, 'linear')
+        gradient_x = forward(
+            x, y, grad_x_fp, distinct_xp, distinct_yp,
+            None, None, 'linear'
+        )
+        gradient_y = forward(
+            x, y, grad_y_fp, distinct_xp, distinct_yp,
+            None, None, 'linear'
+        )
+        gradient_x, gradient_y = torch.sum(gradient_x, dim=-1), torch.sum(gradient_y, dim=-1)
         return grad_output * gradient_x, grad_output * gradient_y, None, None, None, None, None, None
 
     @staticmethod
-    def gradient_create(ctrl_values, distinct_xs, distinct_ys):
-        ctrl_gradient_x, ctrl_gradient_y = [], []
-        ctrl_values = ctrl_values.numpy()
-        distinct_ys = distinct_ys.numpy()
-        distinct_xs = distinct_xs.numpy()
-        for i in range(ctrl_values.shape[0]):
-            ctrl_values_for_one_surface = ctrl_values[i]
-            new_gradient_y, new_gradient_x = np.gradient(ctrl_values_for_one_surface, distinct_ys, distinct_xs)
-            ctrl_gradient_x.append(new_gradient_x)
-            ctrl_gradient_y.append(new_gradient_y)
-        ctrl_gradient_x = torch.from_numpy(np.asarray(ctrl_gradient_x).astype(np.float32))
-        ctrl_gradient_y = torch.from_numpy(np.asarray(ctrl_gradient_y).astype(np.float32))
-        return ctrl_gradient_x, ctrl_gradient_y
-
-    @staticmethod
-    def _check_forward(xs, ys, ctrl_values,
-                       distinct_xs, distinct_ys):
-        if (len(xs.shape) != 1) or (len(ys.shape) != 1):
-            raise RuntimeError(f'(len(xs.shape)({len(xs.shape)}) != 1) or'
-                               f' (len(ys.shape)({len(ys.shape)}) != 1)')
-        if xs.shape[0] != ys.shape[0]:
-            raise RuntimeError(f'xs.shape[0]({xs.shape[0]}) != ys.shape[0]({ys.shape[0]})')
-        if (len(distinct_xs.shape) != 1) or (len(distinct_ys.shape) != 1):
-            raise RuntimeError(f'(len(distinct_xs.shape)({len(distinct_xs.shape)}) != 1) or '
-                               f'(len(distinct_ys.shape)({len(distinct_ys.shape)}) != 1)')
-        num_of_distinct_xs, num_of_distinct_ys = distinct_xs.shape[0], distinct_ys.shape[0]
-        if (len(ctrl_values.shape) != 3):
-            raise RuntimeError(f'(len(ctrl_values.shape)({len(ctrl_values.shape)}) != 3)')
-        if (ctrl_values.shape[1] != num_of_distinct_ys) or (ctrl_values.shape[2] != num_of_distinct_xs):
-            raise RuntimeError(f'ctrl_values.shape({ctrl_values.shape}) != '
-                               f'(_, {num_of_distinct_ys}, {num_of_distinct_xs})')
-
-    @staticmethod
-    def _check_backward(distinct_xs, distinct_ys, ctrl_values, ctrl_gradient_x, ctrl_gradient_y):
-        num_of_distinct_xs = distinct_xs.shape[0]
-        num_of_distinct_ys = distinct_ys.shape[0]
-        infl_surf_cnt = ctrl_values.shape[0]
-        if  (len(ctrl_gradient_x.shape) != 3) or (len(ctrl_gradient_y.shape) != 3):
-            raise RuntimeError(f'(len(ctrl_gradient_x)({len(ctrl_gradient_x.shape)}) != 3) or '
-                               f'(len(ctrl_gradient_y)({len(ctrl_gradient_y.shape)}) != 3)')
-        if (ctrl_gradient_x.shape[0] != infl_surf_cnt) or \
-                (ctrl_gradient_x.shape[1] != num_of_distinct_ys) or \
-                (ctrl_gradient_x.shape[2] != num_of_distinct_xs):
-            raise RuntimeError(f'ctrl_gradient_x.shape({ctrl_gradient_x.shape}) != '
-                               f'({infl_surf_cnt}, {num_of_distinct_ys}, {num_of_distinct_xs})')
-        if (ctrl_gradient_y.shape[0] != infl_surf_cnt) or \
-                (ctrl_gradient_y.shape[1] != num_of_distinct_ys) or \
-                (ctrl_gradient_y.shape[2] != num_of_distinct_xs):
-            raise RuntimeError(f'ctrl_gradient_y.shape({ctrl_gradient_y.shape}) != '
-                               f'({infl_surf_cnt}, {num_of_distinct_ys}, {num_of_distinct_xs})')
-
-    @staticmethod
-    def _bilinear_interp(f, w):
+    def bilinear_interp(f, w):
         sum_w = (w[0][0] + w[0][1] + w[1][0] + w[1][1])
         res = (
             f[0][0] * w[0][0] +
@@ -158,7 +103,7 @@ class RectiBilinearInterpolateFunction(Function):
         return res
 
     @staticmethod
-    def _nearest_interp(f, w):
+    def nearest_interp(f, w):
         chosen_w = w[0][0]
         res = f[0][0]
         for i in range(2):
@@ -168,7 +113,7 @@ class RectiBilinearInterpolateFunction(Function):
         return res
 
     @staticmethod
-    def _farthest_interp(f, w):
+    def farthest_interp(f, w):
         chosen_w = w[0][0]
         res = f[0][0]
         for i in range(2):
@@ -178,11 +123,26 @@ class RectiBilinearInterpolateFunction(Function):
         return res
 
     @staticmethod
-    def _out_of_bounds_values(t, distinct_coords, coords_to_interp):
+    def out_of_bounds_values(t, distinct_coords, coords_to_interp):
+        grid_cnt = t.shape[-1]
+        distinct_coords = torch.stack([distinct_coords for _ in range(grid_cnt)], dim=1)
+        coords_to_interp = torch.stack([coords_to_interp for _ in range(grid_cnt)], dim=1)
+
         t = torch.where(coords_to_interp < torch.min(distinct_coords), torch.zeros_like(t), t)
         t = torch.where(torch.max(distinct_coords) < coords_to_interp, torch.zeros_like(t), t)
         return t
 
     @staticmethod
-    def _searchsorted(disctinct_coords, coords_to_find):
-        return torch.searchsorted(disctinct_coords, coords_to_find, right=True)
+    def gradient_create(fp: torch.Tensor, distinct_xp: torch.Tensor, distinct_yp: torch.Tensor):
+        grad_x_fp, grad_y_fp = [], []
+        for i in range(fp.shape[-1]):
+            fp_for_one_surface = torch.select(fp, dim=-1, index=i)
+            new_gradient_y, new_gradient_x = torch.gradient(fp_for_one_surface,
+                                                            spacing=(distinct_yp, distinct_xp))
+            new_gradient_x = new_gradient_x.unsqueeze(-1)
+            new_gradient_y = new_gradient_y.unsqueeze(-1)
+            grad_x_fp.append(new_gradient_x)
+            grad_y_fp.append(new_gradient_y)
+        grad_x_fp = torch.cat(grad_x_fp, dim=-1)
+        grad_y_fp = torch.cat(grad_y_fp, dim=-1)
+        return grad_x_fp, grad_y_fp

@@ -16,7 +16,7 @@ class Interpolator1D(nn.Module):
         self.xp = nn.Parameter(xp)
         self.fp = nn.Parameter(fp)
 
-        self.grad_fp = torch.gradient(fp, spacing=(xp,))[0] if grad_fp is None else grad_fp
+        self.grad_fp = nn.Parameter(torch.gradient(fp, spacing=(xp,))[0] if grad_fp is None else grad_fp)
 
     def forward(self, x, left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None):
         original_shape = x.shape
@@ -27,6 +27,9 @@ class Interpolator1D(nn.Module):
         )
         y = torch.reshape(y, original_shape)
         return y
+
+    def __call__(self, x, left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None):
+        return self.forward(x, left, right)
 
     @classmethod
     def from_numpy(cls, xp: np.ndarray, fp: np.ndarray, fp_deriv: Optional[np.ndarray]=None):
