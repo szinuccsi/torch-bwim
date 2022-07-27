@@ -161,11 +161,17 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
         torch_x, torch_y = NnModuleUtils.from_array(x), NnModuleUtils.from_array(y)
         torch_x.requires_grad, torch_y.requires_grad = True, True
         res = self.torch_interpolator.forward(x=torch_x, y=torch_y)
-        loss = torch.sum(torch.flatten(res, start_dim=0))
+        loss = torch.sum(torch.sum(res))
         loss.backward()
 
-        print(torch_x.grad)
-        print(torch_y.grad)
+        TorchDataUtils.check_shape(torch_x.grad, expected_shape=x.shape)
+        TorchDataUtils.check_shape(torch_y.grad, expected_shape=y.shape)
+        diff_grad_x = np.abs(torch_x.grad.detach().numpy().flatten() - grad_x_fp.flatten())
+        diff_grad_y = np.abs(torch_y.grad.detach().numpy().flatten() - grad_y_fp.flatten())
+        for d in diff_grad_x:
+            self.assertAlmostEqual(d, 0., delta=self.epsilon)
+        for d in diff_grad_y:
+            self.assertAlmostEqual(d, 0., delta=self.epsilon)
 
     def test_gradient_on_small_grid(self):
         pass

@@ -86,8 +86,8 @@ class RectiBilinearInterpolateFunction(Function):
             x, y, grad_y_fp, distinct_xp, distinct_yp,
             None, None, 'linear'
         )
-        gradient_x, gradient_y = torch.sum(gradient_x, dim=-1), torch.sum(gradient_y, dim=-1)
-        return grad_output * gradient_x, grad_output * gradient_y, None, None, None, None, None, None
+        return torch.sum(grad_output * gradient_x, dim=-1), torch.sum(grad_output * gradient_y, dim=-1), \
+               None, None, None, None, None, None
 
     @staticmethod
     def bilinear_interp(f, w):
