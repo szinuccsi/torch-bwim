@@ -25,10 +25,12 @@ class Interpolator1DTestCase(unittest.TestCase):
     fp: np.ndarray
 
     epsilon = 1e-2
+    cuda: bool
 
     def setUp(self):
         self.xp, self.fp = self.xp_fp_create()
         self.torch_interpolator = Interpolator1D.from_numpy(xp=self.xp, fp=self.fp)
+        self.cuda = False
 
     def xp_fp_create(self):
         first_section = np.linspace(start=self.FIRST_SECTION[0], stop=self.FIRST_SECTION[1], num=self.FIRST_NUM)
@@ -45,10 +47,10 @@ class Interpolator1DTestCase(unittest.TestCase):
     def test_forward_one_seq(self):
         x = self.benchmark_section_create()
         np_f = np.interp(x, xp=self.xp, fp=self.fp)
-        torch_f = self.torch_interpolator.forward(NnModuleUtils.from_array(x))
+        torch_f = self.torch_interpolator.forward(NnModuleUtils.from_array(x, cuda=self.cuda)).detach().cpu()
         TorchDataUtils.check_shape(torch_f, expected_shape=x.shape)
         plt.plot(x, np_f, label='numpy')
-        plt.plot(x, torch_f.detach().numpy(), label='torch')
+        plt.plot(x, torch_f.numpy(), label='torch')
         plt.legend()
         plt.show()
 
@@ -64,13 +66,13 @@ class Interpolator1DTestCase(unittest.TestCase):
         np_x = self.benchmark_section_create()
         np_grad_f = np.interp(np_x, xp=self.xp, fp=self.grad_fp)
 
-        torch_x = NnModuleUtils.from_array(np_x)
+        torch_x = NnModuleUtils.from_array(np_x, cuda=self.cuda)
         torch_x.requires_grad = True
         torch_f = self.torch_interpolator.forward(torch_x)
         loss = torch.sum(torch_f, dim=0)
         loss.backward()
 
-        torch_grad_f = torch_x.grad
+        torch_grad_f = torch_x.grad.detach().cpu()
 
         plt.plot(np_x, np_grad_f, label='numpy')
         plt.plot(np_x, torch_grad_f.numpy(), label='torch')
@@ -78,7 +80,7 @@ class Interpolator1DTestCase(unittest.TestCase):
         plt.show()
 
         exp_f = np_grad_f.tolist()
-        act_f = torch_grad_f.detach().numpy().tolist()
+        act_f = torch_grad_f.numpy().tolist()
         for i in range(len(act_f)):
             self.assertAlmostEqual(act_f[i], exp_f[i], delta=self.epsilon)
 

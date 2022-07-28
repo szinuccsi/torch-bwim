@@ -8,16 +8,6 @@ from torch_bwim.helpers.RandomHelper import RandomHelper
 class TorchDataUtils(object):
 
     @classmethod
-    def unsqueeze_tensors(cls, tensors, dim=0):
-        res = []
-        for t in tensors:
-            new_t = t.unsqueeze(dim)
-            res.append(new_t)
-        if isinstance(tensors, tuple):
-            res = tuple(res)
-        return res
-
-    @classmethod
     def check_shape(cls, t: torch.tensor, expected_shape, tensor_name='tensor', throw_error=True):
         if len(t.shape) != len(expected_shape):
             if throw_error:
@@ -53,41 +43,6 @@ class TorchDataUtils(object):
             return concat_dataset, subset_lens
         else:
             raise RuntimeError(f'clustered_dataset type is not list or dict ({type(clustered_datasets)})')
-
-    @classmethod
-    def cuda_is_available(cls, cuda=True):
-        return torch.cuda.is_available() and cuda
-
-    @classmethod
-    def move_to(cls, t: torch.Tensor, device=None, cuda: bool=None):
-        if (device is None) and (cuda is None):
-            return t
-        if device is not None:
-            return TorchDataUtils.to_device(t, device=device)
-        if cuda is not None:
-            return TorchDataUtils.to_cuda(t, cuda=cuda)
-
-    @classmethod
-    def to_device(cls, t: torch.Tensor, device):
-        if (not isinstance(t, list)) and (not isinstance(t, tuple)):
-            return t.to(device=device)
-        if not isinstance(device, list):
-            device = [device for _ in range(len(t))]
-        if len(device) != len(t):
-            raise RuntimeError(f'len(device)({len(device)}) != len(t)({len(t)})')
-        res = [cls.to_device(t[i], device[i]) for i in range(len(t))]
-        return res if not isinstance(t, tuple) else tuple(res)
-
-    @classmethod
-    def to_cuda(cls, t: torch.Tensor, cuda=True):
-        if (not isinstance(t, list)) and (not isinstance(t, tuple)):
-            return t.cuda() if cls.cuda_is_available() else t
-        if not isinstance(cuda, list):
-            cuda = [cuda for _ in range(len(t))]
-        if len(cuda) != len(t):
-            raise RuntimeError(f'len(cuda)({len(cuda)}) != len(t)({len(t)})')
-        res = [cls.to_cuda(t[i], cuda[i]) for i in range(len(t))]
-        return res if not isinstance(t, tuple) else tuple(res)
 
     @classmethod
     def split_dataset(cls, dataset, length_ratios=[], random_state=None):

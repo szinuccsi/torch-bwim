@@ -14,6 +14,7 @@ class Interpolator1DFunction(Function):
 
         return: shape(num of control points)
     '''
+    # TODO: function cnt
     @staticmethod
     def forward(ctx, x: torch.Tensor, xp: torch.Tensor, fp: torch.Tensor,
                 left: Optional[float], right: Optional[float],
@@ -76,6 +77,4 @@ class Interpolator1DFunction(Function):
     '''
     @staticmethod
     def gradient_create(xp: torch.Tensor, fp: torch.Tensor):
-        grad_fp = torch.gradient(fp, spacing=(xp,))[0]
-        print(grad_fp.shape)
-        return grad_fp
+        return torch.gradient(fp, spacing=(xp,))[0]
