@@ -11,21 +11,23 @@ from torch_bwim.nets.NnModuleUtils import NnModuleUtils
 class Interpolator1D(nn.Module):
 
     def __init__(self, xp: torch.Tensor, fp: torch.Tensor,
-                 grad_fp: Optional[torch.Tensor] = None):
+                 grad_fp: Optional[torch.Tensor]):
         super().__init__()
-        self.xp = nn.Parameter(xp)
-        self.fp = nn.Parameter(fp)
+        self._xp = nn.Parameter(xp)
+        self._fp = nn.Parameter(fp)
+        self._left = torch.select(fp, dim=0, index=0).item()
+        self._right = torch.select(fp, dim=0, index=-1).item()
+        self._grad_fp = nn.Parameter(Interpolator1DFunction.gradient_create(xp=xp, fp=fp)
+                                     if grad_fp is None else grad_fp)
 
-        self.grad_fp = nn.Parameter(torch.gradient(fp, spacing=(xp,))[0] if grad_fp is None else grad_fp)
-
-    def forward(self, x, left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None):
-        original_shape = x.shape
+    def forward(self, x, left: Optional[float] = None, right: Optional[float] = None):
+        left = self._left if left is None else left
+        right = self._right if right is None else right
         x = torch.flatten(x, start_dim=0)
         y = Interpolator1DFunction.apply(
-            x, self.xp, self.fp,
-            left, right, self.grad_fp
+            x, self._xp, self._fp,
+            left, right, self._grad_fp
         )
-        y = torch.reshape(y, original_shape)
         return y
 
     def __call__(self, x, left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None):

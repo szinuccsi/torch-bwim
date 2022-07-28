@@ -52,7 +52,7 @@ class RectiBilinearInterpolateFunction(Function):
                     for i in range(2)]
         ctx.distinct_xp, ctx.distinct_yp = distinct_xp, distinct_yp
         ctx.grad_x_fp, ctx.grad_y_fp = grad_x_fp, grad_y_fp
-        ctx.fp = fp
+        ctx._fp = fp
         if method == 'linear':
             output = RectiBilinearInterpolateFunction.bilinear_interp(fp_values, w_interp)
             output = RectiBilinearInterpolateFunction.out_of_bounds_values(output, distinct_xp, x)
@@ -70,7 +70,7 @@ class RectiBilinearInterpolateFunction(Function):
     @staticmethod
     def backward(ctx, grad_output):
         x, y = ctx.saved_tensors
-        fp = ctx.fp
+        fp = ctx._fp
         distinct_xp, distinct_yp = ctx.distinct_xp, ctx.distinct_yp
         grad_x_fp, grad_y_fp = ctx.grad_x_fp, ctx.grad_y_fp
         if (grad_x_fp is None) or (grad_y_fp is None):

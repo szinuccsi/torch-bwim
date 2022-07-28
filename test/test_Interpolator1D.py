@@ -60,22 +60,6 @@ class Interpolator1DTestCase(unittest.TestCase):
     def benchmark_section_create(self):
         return np.linspace(start=self.TEST_SECTION[0], stop=self.TEST_SECTION[1], num=self.TEST_NUM)
 
-    def test_forward_more_seqs(self):
-        x = np.asarray([
-            self.benchmark_section_create(),
-            0.5 * self.benchmark_section_create()
-        ])
-        np_f = np.asarray([np.interp(x[i], xp=self.xp, fp=self.fp) for i in range(x.shape[0])])
-
-        torch_f = self.torch_interpolator.forward(NnModuleUtils.from_array(x))
-        TorchDataUtils.check_shape(torch_f, expected_shape=x.shape)
-
-        exp_f = np_f
-        act_f = torch_f.detach().numpy()
-        for i in range(act_f.shape[0]):
-            for j in range(act_f.shape[1]):
-                self.assertAlmostEqual(act_f[i][j], exp_f[i][j], delta=self.epsilon)
-
     def test_backward_one_seq(self):
         np_x = self.benchmark_section_create()
         np_grad_f = np.interp(np_x, xp=self.xp, fp=self.grad_fp)
@@ -97,28 +81,6 @@ class Interpolator1DTestCase(unittest.TestCase):
         act_f = torch_grad_f.detach().numpy().tolist()
         for i in range(len(act_f)):
             self.assertAlmostEqual(act_f[i], exp_f[i], delta=self.epsilon)
-
-    def test_backward_more_seq(self):
-        np_x = np.asarray([
-            self.benchmark_section_create(),
-            self.benchmark_section_create()
-        ])
-        np_grad_f = np.asarray([np.interp(np_x[i], xp=self.xp, fp=self.grad_fp)
-                                for i in range(np_x.shape[0])])
-
-        torch_x = NnModuleUtils.from_array(np_x)
-        torch_x.requires_grad = True
-        torch_f = self.torch_interpolator.forward(torch_x)
-        loss = torch.sum(torch.sum(torch_f))
-        loss.backward()
-
-        torch_grad_f = torch_x.grad
-
-        exp_f = np_grad_f
-        act_f = torch_grad_f.detach().numpy()
-        for i in range(act_f.shape[0]):
-            for j in range(act_f.shape[1]):
-                self.assertAlmostEqual(act_f[i][j], exp_f[i][j], delta=self.epsilon)
 
 
 if __name__ == '__main__':

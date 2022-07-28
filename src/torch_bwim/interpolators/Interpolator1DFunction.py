@@ -6,14 +6,23 @@ from torch.autograd import Function
 
 class Interpolator1DFunction(Function):
 
+    '''
+        x: shape(batch_size)
+        xp: shape(num of control points)
+        fp: shape(num of control points)
+        grad_fp: shape(num of control points)
+
+        return: shape(num of control points)
+    '''
     @staticmethod
     def forward(ctx, x: torch.Tensor, xp: torch.Tensor, fp: torch.Tensor,
-                left: Optional[torch.Tensor], right: Optional[torch.Tensor],
-                grad_fp: torch.Tensor) -> torch.Tensor:
+                left: Optional[float], right: Optional[float],
+                grad_fp: Optional[torch.Tensor]) -> torch.Tensor:
         ctx.save_for_backward(x)
-        ctx.grad_fp = grad_fp
-
+        ctx._grad_fp = grad_fp
         indices = torch.searchsorted(xp, x, right=True)
+        left = torch.select(fp, dim=0, index=0).item()
+        right = torch.select(fp, dim=0, index=-1).item()
         indices = [
             torch.clamp(indices - 1.0, min=0, max=len(xp) - 1).int(),
             torch.clamp(indices, min=0, max=len(xp) - 1).int()
@@ -27,19 +36,18 @@ class Interpolator1DFunction(Function):
         output = Interpolator1DFunction.out_of_bounds_interpolate(
             x=x, f=output, xp=xp, left=left, right=right
         )
-        ctx.indices = indices
-        ctx.w_interp = w_interp
-        ctx.grad_fp = grad_fp
+        ctx._grad_fp = grad_fp
+        ctx._xp, ctx._fp = xp, fp
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
-        indices = ctx.indices
-        w_interp = ctx.w_interp
-        grad_fp = ctx.grad_fp
-
-        grad_fp_values = [torch.index_select(grad_fp, dim=0, index=indices[i]) for i in range(2)]
-        output = w_interp[0] * grad_fp_values[0] + w_interp[1] * grad_fp_values[1]
+        x, = ctx.saved_tensors
+        xp, fp = ctx._xp, ctx._fp
+        grad_fp = ctx._grad_fp
+        if grad_fp is None:
+            grad_fp = Interpolator1DFunction.gradient_create(xp=xp, fp=fp)
+        output = Interpolator1DFunction.apply(x, xp, grad_fp, None, None, grad_fp)
         return grad_output * output, None, None, None, None, None
 
     @staticmethod
@@ -53,10 +61,21 @@ class Interpolator1DFunction(Function):
 
     @staticmethod
     def out_of_bounds_interpolate(x: torch.Tensor, f: torch.Tensor, xp: torch.Tensor,
-                                  left: Optional[torch.Tensor], right: Optional[torch.Tensor]):
+                                  left: float, right: float):
+        device = x.device
         min_x, max_x = torch.min(xp), torch.max(xp)
-        if left is not None:
-            f = torch.where(x < min_x, torch.full_like(f, fill_value=left), f)
-        if right is not None:
-            f = torch.where(max_x < x, torch.full_like(f, fill_value=right), f)
+        f = torch.where(x < min_x, torch.full_like(f, fill_value=left, device=device), f)
+        f = torch.where(max_x < x, torch.full_like(f, fill_value=right, device=device), f)
         return f
+
+    '''
+        xp: shape(num of control points)
+        fp: shape(num of control points)
+        
+        return: shape(num of control points)
+    '''
+    @staticmethod
+    def gradient_create(xp: torch.Tensor, fp: torch.Tensor):
+        grad_fp = torch.gradient(fp, spacing=(xp,))[0]
+        print(grad_fp.shape)
+        return grad_fp
