@@ -4,13 +4,15 @@ import numpy as np
 import torch
 from torch.autograd import Function
 
+from torch_bwim.interpolators.Interpolator1DFunction import Interpolator1DFunction
+
 
 class RectiBilinearInterpolateFunction(Function):
 
     '''
         x: shape(num of points to interpolate)
         y: shape(num of points to interpolate)
-        fp: shape(distinct y coords; distinct x coords; grid count)
+        fp: shape(distinct y coords; distinct x coords; function count)
         xp: (distinct y coords; distinct x coords)
         yp: (distinct y coords; distinct x coords)
         distinct_xp: (num of distinct x coords) - sorted
@@ -18,15 +20,18 @@ class RectiBilinearInterpolateFunction(Function):
         grad_x_fp: (grid count; distinct y coords; distinct x coords)
         grad_y_fp: (grid count; distinct y coords; distinct x coords)
         method: 'linear', 'farthest' or 'nearest'
+        fill_mode: 'fill' TODO: edge
+        fill_value: valid in fill mode
     '''
     @staticmethod
     def forward(ctx, x: torch.Tensor, y: torch.Tensor,
                 fp: torch.Tensor,
                 distinct_xp: torch.Tensor, distinct_yp: torch.Tensor,
-                grad_x_fp=None, grad_y_fp=None, method='linear'):
+                grad_x_fp=None, grad_y_fp=None, method='linear',
+                fill_mode: str='fill', fill_value: Optional[torch.Tensor]=None):
         ctx.save_for_backward(x, y)
         fp = torch.flatten(fp, start_dim=0, end_dim=-2)
-        grid_cnt = fp.shape[-1]
+        function_cnt = fp.shape[-1]
 
         x_idxs_in_distinct = torch.searchsorted(distinct_xp, x, right=True)
         y_idxs_in_distinct = torch.searchsorted(distinct_yp, y, right=True)
@@ -48,15 +53,16 @@ class RectiBilinearInterpolateFunction(Function):
 
         w_interp = [[torch.abs((xp_values[1-i] - x) * (yp_values[1 - j] - y)) for j in range(2)]
                     for i in range(2)]
-        w_interp = [[torch.stack([w_interp[i][j] for _ in range(grid_cnt)], dim=1) for j in range(2)]
+        w_interp = [[torch.stack([w_interp[i][j] for _ in range(function_cnt)], dim=1) for j in range(2)]
                     for i in range(2)]
         ctx.distinct_xp, ctx.distinct_yp = distinct_xp, distinct_yp
         ctx.grad_x_fp, ctx.grad_y_fp = grad_x_fp, grad_y_fp
         ctx._fp = fp
         if method == 'linear':
             output = RectiBilinearInterpolateFunction.bilinear_interp(fp_values, w_interp)
-            output = RectiBilinearInterpolateFunction.out_of_bounds_values(output, distinct_xp, x)
-            output = RectiBilinearInterpolateFunction.out_of_bounds_values(output, distinct_yp, y)
+            if fill_mode == 'fill':
+                output = RectiBilinearInterpolateFunction.out_of_bounds_fill(output, distinct_xp, x, fill_value)
+                output = RectiBilinearInterpolateFunction.out_of_bounds_fill(output, distinct_yp, y, fill_value)
             return output
         elif method == 'nearest':
             output = RectiBilinearInterpolateFunction.nearest_interp(fp_values, w_interp)
@@ -123,13 +129,18 @@ class RectiBilinearInterpolateFunction(Function):
         return res
 
     @staticmethod
-    def out_of_bounds_values(t, distinct_coords, coords_to_interp):
-        grid_cnt = t.shape[-1]
-        distinct_coords = torch.stack([distinct_coords for _ in range(grid_cnt)], dim=1)
-        coords_to_interp = torch.stack([coords_to_interp for _ in range(grid_cnt)], dim=1)
-
-        t = torch.where(coords_to_interp < torch.min(distinct_coords), torch.zeros_like(t), t)
-        t = torch.where(torch.max(distinct_coords) < coords_to_interp, torch.zeros_like(t), t)
+    def out_of_bounds_fill(t: torch.Tensor, distinct_coords: torch.Tensor,
+                           coords_to_interp: torch.Tensor, fill_value: Optional[torch.Tensor]):
+        device = t.device
+        function_cnt = t.shape[-1]
+        distinct_coords = distinct_coords.unsqueeze(-1).expand(-1, function_cnt)
+        coords_to_interp = coords_to_interp.unsqueeze(-1).expand(-1, function_cnt)
+        if fill_value is None:
+            fill_value = torch.zeros_like(t, device=device)
+        else:
+            fill_value = fill_value.unsqueeze(0).expand(t.shape[0], -1)
+        t = torch.where(coords_to_interp < torch.min(distinct_coords), fill_value, t)
+        t = torch.where(torch.max(distinct_coords) < coords_to_interp, fill_value, t)
         return t
 
     '''

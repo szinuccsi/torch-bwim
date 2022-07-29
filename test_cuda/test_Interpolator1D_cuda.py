@@ -3,7 +3,7 @@ import unittest
 from test_Interpolator1D import Interpolator1DTestCase
 
 
-class Interpolator1DTestCudaCase(Interpolator1DTestCase):
+class Interpolator1DCudaTestCase(Interpolator1DTestCase):
 
     def setUp(self):
         super().setUp()
