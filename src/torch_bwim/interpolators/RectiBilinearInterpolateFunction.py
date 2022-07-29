@@ -132,17 +132,22 @@ class RectiBilinearInterpolateFunction(Function):
         t = torch.where(torch.max(distinct_coords) < coords_to_interp, torch.zeros_like(t), t)
         return t
 
+    '''
+        fp: shape(num of control points; function cnt)
+        distinct_xp: shape(num of control points)
+        distinct_yp: shape(num of control points)
+        
+        return: Tuple[shape(num of control points, function cnt)]
+    '''
     @staticmethod
     def gradient_create(fp: torch.Tensor, distinct_xp: torch.Tensor, distinct_yp: torch.Tensor):
         grad_x_fp, grad_y_fp = [], []
         for i in range(fp.shape[-1]):
-            fp_for_one_surface = torch.select(fp, dim=-1, index=i)
-            new_gradient_y, new_gradient_x = torch.gradient(fp_for_one_surface,
+            fp_for_one_grid = torch.select(fp, dim=-1, index=i)
+            new_gradient_y, new_gradient_x = torch.gradient(fp_for_one_grid,
                                                             spacing=(distinct_yp, distinct_xp))
-            new_gradient_x = new_gradient_x.unsqueeze(-1)
-            new_gradient_y = new_gradient_y.unsqueeze(-1)
             grad_x_fp.append(new_gradient_x)
             grad_y_fp.append(new_gradient_y)
-        grad_x_fp = torch.cat(grad_x_fp, dim=-1)
-        grad_y_fp = torch.cat(grad_y_fp, dim=-1)
+        grad_x_fp = torch.stack(grad_x_fp, dim=-1)
+        grad_y_fp = torch.stack(grad_y_fp, dim=-1)
         return grad_x_fp, grad_y_fp
