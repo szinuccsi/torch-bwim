@@ -19,6 +19,9 @@ class RectiBilinearInterpolateCudaTestCase(RectiBilinearInterpolateTestCase):
     def test_linear_interpolation_on_small_grid_fill_zero(self):
         super().test_linear_interpolation_on_small_grid_fill_zero()
 
+    def test_linear_interpolation_on_small_grid_edge(self):
+        super().test_linear_interpolation_on_small_grid_edge()
+
     def test_control_points_with_more_grid(self):
         super().test_control_points_with_more_grid()
 
