@@ -113,9 +113,9 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
         +2.166, +1.5, +4.825
     ])
     SMALL_GRID_EXP_F_EDGE_MODE = np.asarray([
-        None, None, None, None,
-        None, None, None, None,
-        None, None,
+        2.0, 1.4, 1.0, -0.33333,
+        0.6, 3.0, 4.0, 3.0,
+        4.68, 7.0,
         +2.166, +1.5, +4.825
     ])
 
@@ -129,7 +129,7 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
             distinct_yp=NnModuleUtils.from_array(distinct_yp, cuda=self.cuda)
         )
         self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
-        self.small_grid_interpolation_test()
+        self.small_grid_interpolation_test(exp_f=self.SMALL_GRID_EXP_F_FILL_MODE)
 
     def test_linear_interpolation_on_small_grid_edge(self):
         distinct_xp = self.SMALL_GRID_DISTINCT_XP
@@ -142,12 +142,11 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
             fill_mode='edge'
         )
         self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
-        self.small_grid_interpolation_test()
+        self.small_grid_interpolation_test(exp_f=self.SMALL_GRID_EXP_F_EDGE_MODE)
 
-    def small_grid_interpolation_test(self):
+    def small_grid_interpolation_test(self, exp_f):
         x = self.SMALL_GRID_X
         y = self.SMALL_GRID_Y
-        exp_f = self.SMALL_GRID_EXP_F_FILL_MODE
 
         torch_f = self.torch_interpolator.forward(
             x=NnModuleUtils.from_array(x, cuda=self.cuda),
