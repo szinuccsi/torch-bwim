@@ -20,7 +20,7 @@ class RectiBilinearInterpolateFunction(Function):
         grad_x_fp: (grid count; distinct y coords; distinct x coords)
         grad_y_fp: (grid count; distinct y coords; distinct x coords)
         method: 'linear', 'farthest' or 'nearest'
-        fill_mode: 'fill' TODO: edge
+        fill_mode: 'fill' or 'edge'
         fill_value: valid in fill mode
     '''
     @staticmethod
@@ -51,8 +51,17 @@ class RectiBilinearInterpolateFunction(Function):
         fp_values = [[torch.index_select(fp, dim=0, index=rectangle_idxs[i][j]) for j in range(2)]
                      for i in range(2)]
 
-        w_interp = [[torch.abs((xp_values[1-i] - x) * (yp_values[1 - j] - y)) for j in range(2)]
-                    for i in range(2)]
+        x_dist = [torch.abs(xp_values[1-i] - x) for i in range(2)]
+        y_dist = [torch.abs(yp_values[1 - j] - y) for j in range(2)]
+
+        x_dist = [RectiBilinearInterpolateFunction.edge_based_dist_corrigation(
+            dist=x_dist[i], distinct_coords=distinct_xp, coords_to_interp=x
+        ) for i in range(2)]
+        y_dist = [RectiBilinearInterpolateFunction.edge_based_dist_corrigation(
+            dist=y_dist[j], distinct_coords=distinct_yp, coords_to_interp=y
+        ) for j in range(2)]
+
+        w_interp = [[torch.abs(x_dist[i] * y_dist[j]) for j in range(2)] for i in range(2)]
         w_interp = [[torch.stack([w_interp[i][j] for _ in range(function_cnt)], dim=1) for j in range(2)]
                     for i in range(2)]
         ctx.distinct_xp, ctx.distinct_yp = distinct_xp, distinct_yp
@@ -63,6 +72,8 @@ class RectiBilinearInterpolateFunction(Function):
             if fill_mode == 'fill':
                 output = RectiBilinearInterpolateFunction.out_of_bounds_fill(output, distinct_xp, x, fill_value)
                 output = RectiBilinearInterpolateFunction.out_of_bounds_fill(output, distinct_yp, y, fill_value)
+            elif fill_mode == 'edge':
+                pass
             return output
         elif method == 'nearest':
             output = RectiBilinearInterpolateFunction.nearest_interp(fp_values, w_interp)
@@ -93,7 +104,7 @@ class RectiBilinearInterpolateFunction(Function):
             None, None, 'linear'
         )
         return torch.sum(grad_output * gradient_x, dim=-1), torch.sum(grad_output * gradient_y, dim=-1), \
-               None, None, None, None, None, None
+               None, None, None, None, None, None, None
 
     @staticmethod
     def bilinear_interp(f, w):
@@ -142,6 +153,16 @@ class RectiBilinearInterpolateFunction(Function):
         t = torch.where(coords_to_interp < torch.min(distinct_coords), fill_value, t)
         t = torch.where(torch.max(distinct_coords) < coords_to_interp, fill_value, t)
         return t
+
+    @staticmethod
+    def edge_based_dist_corrigation(dist, distinct_coords, coords_to_interp):
+        coord_min = torch.min(distinct_coords)\
+            .unsqueeze(-1).expand(coords_to_interp.shape[0])
+        coord_max = torch.max(distinct_coords)\
+            .unsqueeze(-1).expand(coords_to_interp.shape[0])
+        dist = torch.where(coords_to_interp < coord_min, dist + 1., dist)
+        dist = torch.where(coord_max < coords_to_interp, dist + 1., dist)
+        return dist
 
     '''
         fp: shape(num of control points; function cnt)

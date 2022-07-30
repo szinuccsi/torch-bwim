@@ -13,7 +13,7 @@ class RectiBilinearInterpolate(nn.Module):
     def __init__(self, fp: torch.Tensor,
                  distinct_xp: torch.Tensor, distinct_yp: torch.Tensor,
                  grad_x_fp: Optional[torch.Tensor]=None, grad_y_fp: Optional[torch.Tensor]=None,
-                 method='linear'):
+                 method='linear', fill_mode='fill'):
         super().__init__()
         self._distinct_xp = nn.Parameter(distinct_xp)
         self._distinct_yp = nn.Parameter(distinct_yp)
@@ -26,6 +26,7 @@ class RectiBilinearInterpolate(nn.Module):
         self._grad_y_fp = nn.Parameter(grad_y_fp)
 
         self._method = method
+        self._fill_mode = fill_mode
 
     def preprocess(self, fp: torch.Tensor,
                    grad_x_fp: Optional[torch.Tensor]=None,
@@ -50,7 +51,8 @@ class RectiBilinearInterpolate(nn.Module):
         return RectiBilinearInterpolateFunction.apply(
             x, y,
             self._fp, self._distinct_xp, self._distinct_yp,
-            self._grad_x_fp, self._grad_y_fp, self._method
+            self._grad_x_fp, self._grad_y_fp, self._method,
+            self._fill_mode
         )
 
     def __call__(self, x: torch.Tensor, y: torch.Tensor):

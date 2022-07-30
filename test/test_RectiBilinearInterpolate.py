@@ -106,10 +106,16 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
         +0.1, +3.2,
         -1.5, 0.5, 2.50]
     )
-    SMALL_GRID_EXP = np.asarray([
+    SMALL_GRID_EXP_F_FILL_MODE = np.asarray([
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0,
+        +2.166, +1.5, +4.825
+    ])
+    SMALL_GRID_EXP_F_EDGE_MODE = np.asarray([
+        None, None, None, None,
+        None, None, None, None,
+        None, None,
         +2.166, +1.5, +4.825
     ])
 
@@ -123,10 +129,25 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
             distinct_yp=NnModuleUtils.from_array(distinct_yp, cuda=self.cuda)
         )
         self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
+        self.small_grid_interpolation_test()
 
+    def test_linear_interpolation_on_small_grid_edge(self):
+        distinct_xp = self.SMALL_GRID_DISTINCT_XP
+        distinct_yp = self.SMALL_GRID_DISTINCT_YP
+        self.fp = self.SMALL_GRID_FP
+        torch_interpolator = RectiBilinearInterpolate(
+            fp=NnModuleUtils.from_array(self.fp, cuda=self.cuda),
+            distinct_xp=NnModuleUtils.from_array(distinct_xp, cuda=self.cuda),
+            distinct_yp=NnModuleUtils.from_array(distinct_yp, cuda=self.cuda),
+            fill_mode='edge'
+        )
+        self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
+        self.small_grid_interpolation_test()
+
+    def small_grid_interpolation_test(self):
         x = self.SMALL_GRID_X
         y = self.SMALL_GRID_Y
-        exp_f = self.SMALL_GRID_EXP
+        exp_f = self.SMALL_GRID_EXP_F_FILL_MODE
 
         torch_f = self.torch_interpolator.forward(
             x=NnModuleUtils.from_array(x, cuda=self.cuda),
@@ -178,8 +199,8 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
         torch_x = NnModuleUtils.from_array(x, cuda=self.cuda)
         torch_y = NnModuleUtils.from_array(y, cuda=self.cuda)
         torch_x.requires_grad, torch_y.requires_grad = True, True
-        res = self.torch_interpolator.forward(x=torch_x, y=torch_y)
-        loss = torch.sum(torch.sum(res))
+        torch_f = self.torch_interpolator.forward(x=torch_x, y=torch_y)
+        loss = torch.sum(torch.sum(torch_f))
         loss.backward()
 
         TorchDataUtils.check_shape(torch_x.grad, expected_shape=x.shape)
