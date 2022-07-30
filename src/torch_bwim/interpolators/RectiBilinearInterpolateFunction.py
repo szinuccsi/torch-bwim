@@ -141,7 +141,9 @@ class RectiBilinearInterpolateFunction(Function):
 
     @staticmethod
     def out_of_bounds_fill(t: torch.Tensor, distinct_coords: torch.Tensor,
-                           coords_to_interp: torch.Tensor, fill_value: Optional[torch.Tensor]):
+                           coords_to_interp: torch.Tensor,
+                           fill_value: Optional[torch.Tensor],
+                           epsilon_dist: float=1e-5):
         device = t.device
         function_cnt = t.shape[-1]
         distinct_coords = distinct_coords.unsqueeze(-1).expand(-1, function_cnt)
@@ -150,8 +152,15 @@ class RectiBilinearInterpolateFunction(Function):
             fill_value = torch.zeros_like(t, device=device)
         else:
             fill_value = fill_value.unsqueeze(0).expand(t.shape[0], -1)
-        t = torch.where(coords_to_interp < torch.min(distinct_coords), fill_value, t)
-        t = torch.where(torch.max(distinct_coords) < coords_to_interp, fill_value, t)
+        coord_min = torch.min(distinct_coords) \
+            .unsqueeze(-1).unsqueeze(-1).expand(t.shape[0], t.shape[1])
+        coord_max = torch.max(distinct_coords) \
+            .unsqueeze(-1).unsqueeze(-1).expand(t.shape[0], t.shape[1])
+        epsilon_dist = torch.full_like(t, fill_value=epsilon_dist, device=device)
+        t = torch.where(coords_to_interp < (coord_min - epsilon_dist),
+                        fill_value, t)
+        t = torch.where((coord_max + epsilon_dist) < coords_to_interp,
+                        fill_value, t)
         return t
 
     @staticmethod
@@ -161,7 +170,7 @@ class RectiBilinearInterpolateFunction(Function):
         coord_max = torch.max(distinct_coords)\
             .unsqueeze(-1).expand(coords_to_interp.shape[0])
         dist = torch.where(coords_to_interp < coord_min, dist + 1., dist)
-        dist = torch.where(coord_max < coords_to_interp, dist + 1., dist)
+        dist = torch.where(coord_max <= coords_to_interp, dist + 1., dist)
         return dist
 
     '''
