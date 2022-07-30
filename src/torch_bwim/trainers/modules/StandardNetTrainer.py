@@ -71,9 +71,9 @@ class StandardNetTrainer(NetTrainerBase):
                    train_dataset, val_dataset, dataset_provider: TrainDictDataset,
                    loss_function,
                    scheduler_config: SchedulerBase.Config, optimizer_config: OptimizerFactoryBase.Config,
-                   cuda=True,
+                   cuda: bool=True,
                    loss_plotter=None, learning_rate_plotter=None):
-        self.net = net
+        self.net = net if not cuda else net.cuda()
         self.train_loader = self.dataset_to_loader(train_dataset)
         self.val_loader = self.dataset_to_loader(val_dataset)
         self.dataset_provider: TrainDictDataset = dataset_provider

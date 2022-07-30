@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import torch
 
 from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 from torch_bwim.nets.NnModuleUtils import NnModuleUtils
@@ -58,16 +59,16 @@ class NnModuleUtilsTestCase(unittest.TestCase):
     HIDDEN_NEURONS = [16, 32]
     OUT_SIZE = 7
 
-    def test_get_neuron_counts(self):
-        neuron_counts = NnModuleUtils.get_neuron_counts(
-            in_size=self.IN_SIZE, hidden_neurons=self.HIDDEN_NEURONS,
-            out_size=self.OUT_SIZE
-        )
-        self.assertEqual(len(neuron_counts), len(self.HIDDEN_NEURONS) + 2)
-        self.assertEqual(neuron_counts[0], self.IN_SIZE)
-        self.assertEqual(neuron_counts[-1], self.OUT_SIZE)
-        for i in range(len(self.HIDDEN_NEURONS)):
-            self.assertEqual(neuron_counts[i+1], self.HIDDEN_NEURONS[i])
+    def test_unsqueeze_tensors(self):
+        t = torch.randn((128, 48, 32))
+        u = torch.randn((16, 8))
+
+        [res_0] = NnModuleUtils.unsqueeze_tensors([t], dim=0)
+        self.assertTrue(TorchDataUtils.check_shape(res_0, expected_shape=(1, 128, 48, 32)))
+
+        [res_10, res_11] = NnModuleUtils.unsqueeze_tensors([t, u], dim=1)
+        self.assertTrue(TorchDataUtils.check_shape(res_10, expected_shape=(128, 1, 48, 32)))
+        self.assertTrue(TorchDataUtils.check_shape(res_11, expected_shape=(16, 1, 8)))
 
 
 if __name__ == '__main__':

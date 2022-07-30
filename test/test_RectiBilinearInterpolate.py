@@ -27,6 +27,8 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
     distinct_yp: np.ndarray
     epsilon = 1e-3
 
+    cuda: bool
+
     def setUp(self) -> None:
         RandomHelper.set_random_state(42)
         self.distinct_xp, self.distinct_yp, self.mesh_x, self.mesh_y, self.fp = \
@@ -36,34 +38,37 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
             distinct_xp=NnModuleUtils.from_array(self.distinct_xp),
             distinct_yp=NnModuleUtils.from_array(self.distinct_yp)
         )
+        self.cuda = False
 
     def test_control_points(self):
         x, y = self.mesh_x.flatten(), self.mesh_y.flatten()
-        res = self.torch_interpolator.forward(
-            x=NnModuleUtils.from_array(x),
-            y=NnModuleUtils.from_array(y)
-        ).detach().numpy()
+        torch_f = self.torch_interpolator.forward(
+            x=NnModuleUtils.from_array(x, cuda=self.cuda),
+            y=NnModuleUtils.from_array(y, cuda=self.cuda)
+        ).detach().cpu()
         exp_shape = [s for s in x.shape]
         exp_shape.append(1)
         exp_shape = tuple(exp_shape)
-        TorchDataUtils.check_shape(res, expected_shape=exp_shape)
-        diff = np.abs(res.flatten() - self.fp.flatten())
+        TorchDataUtils.check_shape(torch_f, expected_shape=exp_shape)
+
+        exp_f = self.fp.flatten()
+        act_f = torch_f.numpy().flatten()
+        diff = np.abs(act_f - exp_f)
         for d in diff:
             self.assertAlmostEqual(d, 0., delta=self.epsilon)
-
         self.plot(self.mesh_x, self.mesh_y, self.fp)
-        self.plot(self.mesh_x, self.mesh_y, res.reshape(self.fp.shape))
+        self.plot(self.mesh_x, self.mesh_y, act_f.reshape(self.fp.shape))
 
     def plot(self, mesh_x, mesh_y, mesh_z):
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         ax.plot_surface(mesh_x, mesh_y, mesh_z)
         plt.show()
 
-    def test_values_with_random_points(self):
+    def test_values_with_random_points_nearest(self):
         x_new = np.random.randn(32) * 7
         y_new = np.random.randn(32) * 7
 
-        exp = interpolate.griddata(
+        exp_f = interpolate.griddata(
             points=(self.mesh_x.flatten(), self.mesh_y.flatten()),
             values=self.fp.flatten(),
             xi=(x_new, y_new),
@@ -71,11 +76,14 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
             method='nearest'
         )
         self.torch_interpolator.method = 'nearest'
-        res = self.torch_interpolator.forward(
-            x=NnModuleUtils.from_array(x_new),
-            y=NnModuleUtils.from_array(y_new)
-        ).detach().numpy().flatten()
-        diff = np.abs(res.flatten() - exp.flatten())
+        torch_f = self.torch_interpolator.forward(
+            x=NnModuleUtils.from_array(x_new, cuda=self.cuda),
+            y=NnModuleUtils.from_array(y_new, cuda=self.cuda)
+        ).detach().cpu()
+
+        exp_f = exp_f.flatten()
+        act_f = torch_f.numpy().flatten()
+        diff = np.abs(act_f.flatten() - exp_f.flatten())
         for d in diff:
             self.assertAlmostEqual(d, 0., delta=self.epsilon)
 
@@ -98,76 +106,110 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
         +0.1, +3.2,
         -1.5, 0.5, 2.50]
     )
-    SMALL_GRID_EXP = np.asarray([
+    SMALL_GRID_EXP_F_FILL_MODE = np.asarray([
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0,
         +2.166, +1.5, +4.825
     ])
+    SMALL_GRID_EXP_F_EDGE_MODE = np.asarray([
+        2.0, 1.4, 1.0, -0.33333,
+        0.6, 3.0, 4.0, 3.0,
+        4.68, 7.0,
+        +2.166, +1.5, +4.825
+    ])
 
-    def test_linear_interpolation_on_small_grid(self):
+    def test_linear_interpolation_on_small_grid_fill_zero(self):
         distinct_xp = self.SMALL_GRID_DISTINCT_XP
         distinct_yp = self.SMALL_GRID_DISTINCT_YP
         self.fp = self.SMALL_GRID_FP
-        self.torch_interpolator = RectiBilinearInterpolate(
-            fp=NnModuleUtils.from_array(self.fp),
-            distinct_xp=NnModuleUtils.from_array(distinct_xp),
-            distinct_yp=NnModuleUtils.from_array(distinct_yp)
+        torch_interpolator = RectiBilinearInterpolate(
+            fp=NnModuleUtils.from_array(self.fp, cuda=self.cuda),
+            distinct_xp=NnModuleUtils.from_array(distinct_xp, cuda=self.cuda),
+            distinct_yp=NnModuleUtils.from_array(distinct_yp, cuda=self.cuda)
         )
+        self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
+        self.small_grid_interpolation_test(exp_f=self.SMALL_GRID_EXP_F_FILL_MODE)
 
+    def test_linear_interpolation_on_small_grid_edge(self):
+        distinct_xp = self.SMALL_GRID_DISTINCT_XP
+        distinct_yp = self.SMALL_GRID_DISTINCT_YP
+        self.fp = self.SMALL_GRID_FP
+        torch_interpolator = RectiBilinearInterpolate(
+            fp=NnModuleUtils.from_array(self.fp, cuda=self.cuda),
+            distinct_xp=NnModuleUtils.from_array(distinct_xp, cuda=self.cuda),
+            distinct_yp=NnModuleUtils.from_array(distinct_yp, cuda=self.cuda),
+            fill_mode='edge'
+        )
+        self.torch_interpolator = torch_interpolator.cuda() if self.cuda else torch_interpolator
+        self.small_grid_interpolation_test(exp_f=self.SMALL_GRID_EXP_F_EDGE_MODE)
+
+    def small_grid_interpolation_test(self, exp_f):
         x = self.SMALL_GRID_X
         y = self.SMALL_GRID_Y
-        exp = self.SMALL_GRID_EXP
 
-        res = self.torch_interpolator.forward(
-            x=NnModuleUtils.from_array(x),
-            y=NnModuleUtils.from_array(y)
-        ).detach().numpy()
-        diff = np.abs(res.flatten() - exp.flatten())
-        print(res.flatten())
-        print(exp.flatten())
+        torch_f = self.torch_interpolator.forward(
+            x=NnModuleUtils.from_array(x, cuda=self.cuda),
+            y=NnModuleUtils.from_array(y, cuda=self.cuda)
+        ).detach().cpu()
+        exp_f = exp_f.flatten()
+        act_f = torch_f.detach().flatten()
+        diff = np.abs(act_f.flatten() - exp_f.flatten())
+        print(act_f.flatten())
+        print(exp_f.flatten())
         for d in diff:
             self.assertAlmostEqual(d, 0., delta=self.epsilon)
 
-    def test_control_points_with_more_grid(self):
-        self.torch_interpolator.add_numpy(fp=2 * self.fp)
-        x, y = self.mesh_x.flatten(), self.mesh_y.flatten()
-        res = self.torch_interpolator.forward(
-            x=NnModuleUtils.from_array(x),
-            y=NnModuleUtils.from_array(y)
-        ).detach().numpy()
+    more_grid_multiplier = 3.0
 
-        exp_shape = list(x.shape)
-        exp_shape.append(2)
-        exp_shape = tuple(exp_shape)
-        TorchDataUtils.check_shape(res, expected_shape=exp_shape)
-        for i in range(2):
-            diff = np.abs(res[:, i].flatten() - (i+1) * self.fp.flatten())
-            for d in diff:
-                self.assertAlmostEqual(d, 0., delta=self.epsilon)
+    def test_control_points_with_more_grid(self):
+        self.torch_interpolator.append(
+            fp=NnModuleUtils.from_array(self.more_grid_multiplier * self.fp,
+                                        cuda=self.cuda)
+        )
+        x, y = self.mesh_x.flatten(), self.mesh_y.flatten()
+        torch_f = self.torch_interpolator.forward(
+            x=NnModuleUtils.from_array(x, cuda=self.cuda),
+            y=NnModuleUtils.from_array(y, cuda=self.cuda)
+        ).detach().cpu()
+
+        TorchDataUtils.check_shape(torch_f, expected_shape=(x.shape[0], 2))
+        act_f = torch.transpose(torch_f, 0, 1).numpy().flatten()
+        exp_f = np.asarray([self.fp, self.more_grid_multiplier * self.fp]).flatten()
+        diff = np.abs(act_f - exp_f)
+        for d in diff:
+            self.assertAlmostEqual(d, 0., delta=self.epsilon)
+
+    grad_x_multiplier = 2.0
+    grad_y_multiplier = 3.0
 
     def test_gradient_control_points(self):
-        grad_x_fp = 2.0 * self.fp
-        grad_y_fp = 3.0 * self.fp
+        grad_x_fp = self.grad_x_multiplier * self.fp
+        grad_y_fp = self.grad_y_multiplier * self.fp
         self.torch_interpolator = RectiBilinearInterpolate(
-            fp=NnModuleUtils.from_array(self.fp),
-            distinct_xp=NnModuleUtils.from_array(self.distinct_xp),
-            distinct_yp=NnModuleUtils.from_array(self.distinct_yp),
-            grad_x_fp=NnModuleUtils.from_array(grad_x_fp),
-            grad_y_fp=NnModuleUtils.from_array(grad_y_fp)
+            fp=NnModuleUtils.from_array(self.fp, cuda=self.cuda),
+            distinct_xp=NnModuleUtils.from_array(self.distinct_xp, cuda=self.cuda),
+            distinct_yp=NnModuleUtils.from_array(self.distinct_yp, cuda=self.cuda),
+            grad_x_fp=NnModuleUtils.from_array(grad_x_fp, cuda=self.cuda),
+            grad_y_fp=NnModuleUtils.from_array(grad_y_fp, cuda=self.cuda)
         )
 
         x, y = self.mesh_x.flatten(), self.mesh_y.flatten()
-        torch_x, torch_y = NnModuleUtils.from_array(x), NnModuleUtils.from_array(y)
+        torch_x = NnModuleUtils.from_array(x, cuda=self.cuda)
+        torch_y = NnModuleUtils.from_array(y, cuda=self.cuda)
         torch_x.requires_grad, torch_y.requires_grad = True, True
-        res = self.torch_interpolator.forward(x=torch_x, y=torch_y)
-        loss = torch.sum(torch.sum(res))
+        torch_f = self.torch_interpolator.forward(x=torch_x, y=torch_y)
+        loss = torch.sum(torch.sum(torch_f))
         loss.backward()
 
         TorchDataUtils.check_shape(torch_x.grad, expected_shape=x.shape)
         TorchDataUtils.check_shape(torch_y.grad, expected_shape=y.shape)
-        diff_grad_x = np.abs(torch_x.grad.detach().numpy().flatten() - grad_x_fp.flatten())
-        diff_grad_y = np.abs(torch_y.grad.detach().numpy().flatten() - grad_y_fp.flatten())
+
+        act_grad_x = torch_x.grad.cpu().numpy().flatten()
+        act_grad_y = torch_y.grad.cpu().numpy().flatten()
+        exp_grad_x, exp_grad_y = grad_x_fp.flatten(), grad_y_fp.flatten()
+        diff_grad_x = np.abs(act_grad_x - exp_grad_x)
+        diff_grad_y = np.abs(act_grad_y - exp_grad_y)
         for d in diff_grad_x:
             self.assertAlmostEqual(d, 0., delta=self.epsilon)
         for d in diff_grad_y:

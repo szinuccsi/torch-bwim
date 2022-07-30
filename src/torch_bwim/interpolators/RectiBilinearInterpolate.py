@@ -13,12 +13,12 @@ class RectiBilinearInterpolate(nn.Module):
     def __init__(self, fp: torch.Tensor,
                  distinct_xp: torch.Tensor, distinct_yp: torch.Tensor,
                  grad_x_fp: Optional[torch.Tensor]=None, grad_y_fp: Optional[torch.Tensor]=None,
-                 method='linear'):
+                 method='linear', fill_mode='fill'):
         super().__init__()
         self._distinct_xp = nn.Parameter(distinct_xp)
         self._distinct_yp = nn.Parameter(distinct_yp)
 
-        fp, grad_x_fp, grad_y_fp = self.process_control_points(
+        fp, grad_x_fp, grad_y_fp = self.preprocess(
             fp=fp, grad_x_fp=grad_x_fp, grad_y_fp=grad_y_fp
         )
         self._fp = nn.Parameter(fp)
@@ -26,10 +26,11 @@ class RectiBilinearInterpolate(nn.Module):
         self._grad_y_fp = nn.Parameter(grad_y_fp)
 
         self._method = method
+        self._fill_mode = fill_mode
 
-    def process_control_points(self, fp: torch.Tensor,
-                               grad_x_fp: Optional[torch.Tensor]=None,
-                               grad_y_fp: Optional[torch.Tensor]=None):
+    def preprocess(self, fp: torch.Tensor,
+                   grad_x_fp: Optional[torch.Tensor]=None,
+                   grad_y_fp: Optional[torch.Tensor]=None):
         fp = fp.unsqueeze(-1) if len(fp.shape) == 2 else fp
         if (grad_x_fp is None) or (grad_y_fp is None):
             grad_x_fp, grad_y_fp = self.gradient_create(
@@ -50,7 +51,8 @@ class RectiBilinearInterpolate(nn.Module):
         return RectiBilinearInterpolateFunction.apply(
             x, y,
             self._fp, self._distinct_xp, self._distinct_yp,
-            self._grad_x_fp, self._grad_y_fp, self._method
+            self._grad_x_fp, self._grad_y_fp, self._method,
+            self._fill_mode
         )
 
     def __call__(self, x: torch.Tensor, y: torch.Tensor):
@@ -68,23 +70,14 @@ class RectiBilinearInterpolate(nn.Module):
     def _set_method(self, val): self._method = val
     method = property(_get_method, _set_method)
 
-    def add(self, fp: torch.Tensor,
-            grad_x_fp: Optional[torch.Tensor]=None, grad_y_fp: Optional[torch.Tensor]=None):
-        fp, grad_x_fp, grad_y_fp = self.process_control_points(
+    def append(self, fp: torch.Tensor,
+               grad_x_fp: Optional[torch.Tensor]=None, grad_y_fp: Optional[torch.Tensor]=None):
+        fp, grad_x_fp, grad_y_fp = self.preprocess(
             fp=fp, grad_x_fp=grad_x_fp, grad_y_fp=grad_y_fp
         )
         self._fp = nn.Parameter(torch.cat([self._fp, fp], dim=-1))
         self._grad_x_fp = nn.Parameter(torch.cat([self._grad_x_fp, grad_x_fp], dim=-1))
         self._grad_y_fp = nn.Parameter(torch.cat([self._grad_y_fp, grad_y_fp], dim=-1))
-        return self
-
-    def add_numpy(self, fp: np.ndarray,
-                  grad_x_fp: Optional[np.ndarray]=None, grad_y_fp: Optional[np.ndarray]=None):
-        self.add(
-            fp=NnModuleUtils.from_array(fp),
-            grad_x_fp=NnModuleUtils.from_array(grad_x_fp) if grad_x_fp is not None else grad_x_fp,
-            grad_y_fp=NnModuleUtils.from_array(grad_y_fp) if grad_y_fp is not None else grad_y_fp
-        )
         return self
 
     @classmethod
