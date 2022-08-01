@@ -25,19 +25,19 @@ class NnModuleUtils(object):
         return neuron_counts
 
     @classmethod
-    def from_numpy(cls, np_array, dtype=np.float64, cuda=None):
+    def from_numpy(cls, np_array, dtype=np.float32, cuda=None):
         t = torch.from_numpy(np_array.astype(dtype))
         t = t if cuda is None else NnModuleUtils.to_cuda(t, cuda=cuda)
         return t
 
     @classmethod
-    def from_array(cls, arr, dtype=np.float64, cuda=None):
+    def from_array(cls, arr, dtype=np.float32, cuda=None):
         t = NnModuleUtils.from_numpy(np.asarray(arr), dtype=dtype)
         t = t if cuda is None else NnModuleUtils.to_cuda(t, cuda=cuda)
         return t
 
     @classmethod
-    def from_nontensor(cls, val, dtype=np.float64, cuda: Optional[bool]=None):
+    def from_nontensor(cls, val, dtype=np.float32, cuda: Optional[bool]=None):
         if isinstance(val, list) or isinstance(val, np.ndarray):
             return NnModuleUtils.from_array(arr=val, dtype=dtype, cuda=cuda)
         t = torch.tensor(val)
