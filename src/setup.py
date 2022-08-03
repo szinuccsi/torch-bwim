@@ -2,7 +2,7 @@ import setuptools
 
 
 setuptools.setup(
-    name="YOUR PACKAGE NAME",
+    name="torch_bwim",
     version="0.0.1",
     author="Bence Szinyéri",
     author_email="szinyeribence@edu.bme.hu",
