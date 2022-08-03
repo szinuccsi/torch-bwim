@@ -20,7 +20,7 @@ class SerializableAlg(object):
     def __init__(self, config: Config=None):
         super().__init__()
         if config is None:
-            config = self.Config()
+            config = SerializableAlg.Config()
         self.config = config
 
     class PersistConfig(object):

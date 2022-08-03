@@ -9,12 +9,14 @@ from torch_bwim.helpers.Version import Version
 class NetBase(nn.Module):
 
     class Config(object):
-        def __init__(self, version: str=None):
+        def __init__(self, version: Version=None):
             super().__init__()
             if version is None:
                 version = self.get_latest_version()
             if isinstance(version, Version):
                 version = str(version)
+            if not isinstance(version, str):
+                raise RuntimeError(f'version is not str')
             self.version = version
 
         @classmethod
@@ -25,6 +27,12 @@ class NetBase(nn.Module):
         super().__init__()
         self.config = config
         RandomHelper.set_random_state(random_state=random_state)
+
+    def __call__(self, *args, **kwargs):
+        res = self.forward(*args, **kwargs)
+        if not isinstance(res, tuple):
+            res = res,
+        return res
 
     class PersistConfig(object):
         def __init__(self, nn_weight_filename='state_dict.pth', nn_config_filename='net_config.json'):

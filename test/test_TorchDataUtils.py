@@ -23,17 +23,6 @@ class TorchDataUtilsTestCase(unittest.TestCase):
         self.assertFalse(TorchDataUtils.check_shape(t=t, expected_shape=(None, None, 0), throw_error=False))
         self.assertFalse(TorchDataUtils.check_shape(t=t, expected_shape=(128, 0, 0), throw_error=False))
 
-    def test_unsqueeze_tensors(self):
-        t = torch.randn((128, 48, 32))
-        u = torch.randn((16, 8))
-
-        [res_0] = TorchDataUtils.unsqueeze_tensors([t], dim=0)
-        self.assertTrue(TorchDataUtils.check_shape(res_0, expected_shape=(1, 128, 48, 32)))
-
-        [res_10, res_11] = TorchDataUtils.unsqueeze_tensors([t, u], dim=1)
-        self.assertTrue(TorchDataUtils.check_shape(res_10, expected_shape=(128, 1, 48, 32)))
-        self.assertTrue(TorchDataUtils.check_shape(res_11, expected_shape=(16, 1, 8)))
-
     DATASET1 = DictDataset(dict_dataset=[0, 1, 2],
                            input_to_tensor_adapter=lambda d: (d, d))
     DATASET2 = DictDataset(dict_dataset=[0, 1, 2, 3, 4],

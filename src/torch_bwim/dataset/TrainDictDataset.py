@@ -1,6 +1,8 @@
 from torch_bwim.dataset.DataAugmentationConverter import DataAugmentationConverter
 from torch_bwim.dataset.DictDataset import DictDataset
 from torch_bwim.dataset.ToTensorAdapter import ToTensorAdapter
+from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
+from torch_bwim.nets.NnModuleUtils import NnModuleUtils
 
 
 class TrainDictDataset(DictDataset):
@@ -28,9 +30,13 @@ class TrainDictDataset(DictDataset):
         res = (index,) + inputs + labels
         return res
 
+    def to_label(self, tensors, device=None, cuda=None):
+        return tuple(NnModuleUtils.move_to(tensors[self.label_feats_range[0]: self.label_feats_range[1]],
+                                            device=device, cuda=cuda))
+
     def get_label(self, index):
         res = self.__getitem__(index)
-        return res[self.label_feats_range[0]: self.label_feats_range[1]]
+        return self.to_label(res)
 
     def _get_label_feats_range(self):
         if self._label_feats_range is None:
