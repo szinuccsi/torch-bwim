@@ -1,4 +1,3 @@
-from torch_bwim.helpers.PersistHelper import PersistHelper
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 from torch_bwim.optimizers.modules.AdamFactory import AdamFactory
 from torch_bwim.optimizers.modules.SGDFactory import SGDFactory

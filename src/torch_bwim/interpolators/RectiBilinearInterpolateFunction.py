@@ -1,10 +1,7 @@
 from typing import Optional
 
-import numpy as np
 import torch
 from torch.autograd import Function
-
-from torch_bwim.interpolators.Interpolator1DFunction import Interpolator1DFunction
 
 
 class RectiBilinearInterpolateFunction(Function):

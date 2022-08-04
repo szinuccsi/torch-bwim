@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="torch_bwim",
-    version="0.0.1",
+    version="0.0.2",
     author="Bence Szinyéri",
     author_email="szinyeribence@edu.bme.hu",
     description="Neural Network Framework",
@@ -18,7 +18,8 @@ setuptools.setup(
         "numpy",
         "torch",
         "matplotlib",
-        "scipy"
+        "scipy",
+        "git+https://github.com/szinuccsi/persistance_helper.git#subdirectory=src"
     ],
     python_requires='>=3.8',
 )

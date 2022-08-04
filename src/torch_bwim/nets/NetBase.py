@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
+from persistance_helper.PersistHelper import PersistHelper
+from persistance_helper.Version import Version
 
-from torch_bwim.helpers.PersistHelper import PersistHelper
 from torch_bwim.helpers.RandomHelper import RandomHelper
-from torch_bwim.helpers.Version import Version
+
 
 
 class NetBase(nn.Module):

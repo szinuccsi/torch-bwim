@@ -3,7 +3,6 @@ import gym
 from torch_bwim.loss_functions.reinforcement_learning.ReinforcementLoss import ReinforcementLoss
 from torch_bwim.lr_schedulers.SchedulerBase import SchedulerBase
 from torch_bwim.lr_schedulers.service.SchedulerBuilder import SchedulerBuilder
-from torch_bwim.nets.NetBase import NetBase
 from torch_bwim.nets.modules.reinforce.ActorCriticNetBase import ActorCriticNetBase
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 from torch_bwim.optimizers.service.OptimizerBuilder import OptimizerBuilder

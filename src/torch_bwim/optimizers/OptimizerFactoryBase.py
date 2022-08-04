@@ -1,4 +1,4 @@
-from torch_bwim.helpers.PersistHelper import PersistHelper
+from persistance_helper.PersistHelper import PersistHelper
 
 
 class OptimizerFactoryBase(object):

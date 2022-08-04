@@ -1,6 +1,5 @@
 import torch
-
-from torch_bwim.helpers.SerializableAlg import SerializableAlg
+from persistance_helper.SerializableAlg import SerializableAlg
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
 
 

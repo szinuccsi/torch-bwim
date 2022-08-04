@@ -1,7 +1,6 @@
 import random
 import torch.utils.data
 
-from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 from torch_bwim.helpers.RandomHelper import RandomHelper
 
 

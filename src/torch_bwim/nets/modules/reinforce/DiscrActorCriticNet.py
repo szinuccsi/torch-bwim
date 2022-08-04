@@ -1,6 +1,6 @@
+from persistance_helper.Version import Version
 from torch.distributions import Categorical
 
-from torch_bwim.helpers.Version import Version
 from torch_bwim.nets.modules.reinforce.ActorCriticNetBase import ActorCriticNetBase
 
 
