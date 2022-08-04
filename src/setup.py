@@ -18,8 +18,7 @@ setuptools.setup(
         "numpy",
         "torch",
         "matplotlib",
-        "scipy",
-        "git+https://github.com/szinuccsi/persistance_helper.git#subdirectory=src"
+        "scipy"
     ],
     python_requires='>=3.8',
 )
