@@ -94,9 +94,9 @@ class RectiBilinearInterpolate(nn.Module):
             grad_x_fp.append(interp._grad_x_fp)
             grad_y_fp.append(interp._grad_y_fp)
 
-        fp = torch.cat(fp, dim=1)
-        grad_x_fp = torch.cat(grad_x_fp, dim=1)
-        grad_y_fp = torch.cat(grad_y_fp, dim=1)
+        fp = torch.cat(fp, dim=-1)
+        grad_x_fp = torch.cat(grad_x_fp, dim=-1)
+        grad_y_fp = torch.cat(grad_y_fp, dim=-1)
         return RectiBilinearInterpolate(
             fp=fp,
             distinct_xp=distinct_xp, distinct_yp=distinct_yp,

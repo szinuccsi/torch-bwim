@@ -28,6 +28,9 @@ class RectiBilinearInterpolateCudaTestCase(RectiBilinearInterpolateTestCase):
     def test_gradient_control_points(self):
         super().test_gradient_control_points()
 
+    def test_merge(self):
+        super().test_merge()
+
 
 if __name__ == '__main__':
     unittest.main()
