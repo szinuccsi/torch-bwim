@@ -2,8 +2,8 @@ import setuptools
 
 
 setuptools.setup(
-    name="YOUR PACKAGE NAME",
-    version="0.0.1",
+    name="torch_bwim",
+    version="0.0.3",
     author="Bence Szinyéri",
     author_email="szinyeribence@edu.bme.hu",
     description="Neural Network Framework",

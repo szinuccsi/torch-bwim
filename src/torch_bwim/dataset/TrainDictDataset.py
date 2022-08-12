@@ -1,7 +1,6 @@
 from torch_bwim.dataset.DataAugmentationConverter import DataAugmentationConverter
 from torch_bwim.dataset.DictDataset import DictDataset
 from torch_bwim.dataset.ToTensorAdapter import ToTensorAdapter
-from torch_bwim.dataset.TorchDataUtils import TorchDataUtils
 from torch_bwim.nets.NnModuleUtils import NnModuleUtils
 
 

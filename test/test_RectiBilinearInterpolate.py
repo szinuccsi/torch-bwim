@@ -225,6 +225,35 @@ class RectiBilinearInterpolateTestCase(unittest.TestCase):
     def test_gradient_more_grids(self):
         pass
 
+    def test_merge(self):
+        interp1 = RectiBilinearInterpolate(
+            fp=NnModuleUtils.from_array(self.fp),
+            distinct_xp=NnModuleUtils.from_array(self.distinct_xp),
+            distinct_yp=NnModuleUtils.from_array(self.distinct_yp)
+        )
+        interp2 = RectiBilinearInterpolate(
+            fp=NnModuleUtils.from_array(self.more_grid_multiplier * self.fp),
+            distinct_xp=NnModuleUtils.from_array(self.distinct_xp),
+            distinct_yp=NnModuleUtils.from_array(self.distinct_yp)
+        )
+        interp1, interp2 = (interp1.cuda(), interp2.cuda()) if self.cuda else (interp1, interp2)
+        self.torch_interpolator = RectiBilinearInterpolate.merge(interpolators=[interp1, interp2])
+        self.assertEqual(self.torch_interpolator._fp.shape[-1], 2)
+
+        x, y = self.mesh_x.flatten(), self.mesh_y.flatten()
+        torch_f = self.torch_interpolator.forward(
+            x=NnModuleUtils.from_array(x, cuda=self.cuda),
+            y=NnModuleUtils.from_array(y, cuda=self.cuda)
+        ).detach().cpu()
+
+        TorchDataUtils.check_shape(torch_f, expected_shape=(x.shape[0], 2))
+        act_f = torch.transpose(torch_f, 0, 1).numpy().flatten()
+        exp_f = np.asarray([self.fp, self.more_grid_multiplier * self.fp]).flatten()
+        diff = np.abs(act_f - exp_f)
+        for d in diff:
+            self.assertAlmostEqual(d, 0., delta=self.epsilon)
+
+
 
 if __name__ == '__main__':
     unittest.main()

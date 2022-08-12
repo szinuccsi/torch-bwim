@@ -1,8 +1,8 @@
 from collections import namedtuple
 
 import torch
+from persistance_helper.Version import Version
 
-from torch_bwim.helpers.Version import Version
 from torch_bwim.nets.NetBase import NetBase
 
 
