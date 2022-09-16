@@ -27,7 +27,7 @@ class Interpolator1D(nn.Module):
         self.postprocess(fp=fp)
 
     @classmethod
-    def preprocess(self, fp: torch.Tensor, xp: torch.Tensor,
+    def preprocess(cls, fp: torch.Tensor, xp: torch.Tensor,
                    grad_fp: Optional[torch.Tensor]):
         with torch.no_grad():
             fp = fp.unsqueeze(-1) if len(fp.shape) == 1 else fp
@@ -83,6 +83,7 @@ class Interpolator1D(nn.Module):
     def interpolate(cls, x: torch.Tensor, xp: torch.Tensor, fp: torch.Tensor,
                     left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None,
                     grad_fp: Optional[torch.Tensor] = None):
+        fp, grad_fp = cls.preprocess(fp=fp, xp=xp, grad_fp=grad_fp)
         return Interpolator1DFunction.apply(
             x, xp, fp,
             left, right, grad_fp
