@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="torch_bwim",
-    version="0.0.3",
+    version="0.0.4",
     author="Bence Szinyéri",
     author_email="szinyeribence@edu.bme.hu",
     description="Neural Network Framework",
