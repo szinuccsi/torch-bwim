@@ -1,5 +1,5 @@
 numpy
 torch
-matplotlib
+matplotlib==3.5.2
 scipy
 git+https://github.com/szinuccsi/persistance_helper.git#subdirectory=src

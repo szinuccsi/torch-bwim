@@ -1,10 +1,11 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from persistance_helper.PersistHelper import PersistHelper
 from persistance_helper.Version import Version
 
 from torch_bwim.helpers.RandomHelper import RandomHelper
-
 
 
 class NetBase(nn.Module):
@@ -24,7 +25,7 @@ class NetBase(nn.Module):
         def get_latest_version(cls):
             return Version(0, 1, 0)
 
-    def __init__(self, config: Config, random_state=None):
+    def __init__(self, config: Config, random_state: Optional[int] = None):
         super().__init__()
         self.config = config
         RandomHelper.set_random_state(random_state=random_state)
@@ -44,7 +45,7 @@ class NetBase(nn.Module):
     def save_net(self, folder_path: str, persist_config: PersistConfig=None, weights=True):
         if persist_config is None:
             persist_config = self.PersistConfig()
-        self._check_persist_config(folder_path=folder_path, persist_config=persist_config)
+        self.check_persist_config(folder_path=folder_path, persist_config=persist_config)
         PersistHelper.save_object_to_json(
             data=self.config,
             path=PersistHelper.merge_paths([folder_path, persist_config.nn_config_filename])
@@ -59,7 +60,7 @@ class NetBase(nn.Module):
     def load_net(cls, folder_path: str, persist_config: PersistConfig=None, weights=True):
         if persist_config is None:
             persist_config = cls.PersistConfig()
-        cls._check_persist_config(folder_path=folder_path, persist_config=persist_config)
+        cls.check_persist_config(folder_path=folder_path, persist_config=persist_config)
         net_config = PersistHelper.load_json_to_object(
             path=PersistHelper.merge_paths([folder_path, persist_config.nn_config_filename])
         )

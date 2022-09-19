@@ -34,6 +34,8 @@ class ClusteredDatasetBasedTrainer(StandardNetTrainer):
     def dataset_to_loader(self, dataset):
         if isinstance(dataset, list):
             dataset, _ = TorchDataUtils.concat_datasets(dataset)
+        if self.dataset_provider is None:
+            raise RuntimeError(f'Dataset provider must not be None')
         clustered_dataset, batch_sampler = self.dataset_mapper(
             dataset=dataset, dataset_provider=self.dataset_provider,
             batch_size=self.train_config.batch_size,
