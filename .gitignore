@@ -130,3 +130,6 @@ dmypy.json
 docs/pip_installing.ipynb
 docs/pip_installing.ipynb
 docs/pip_installing.ipynb
+/res/
+.idea/torch-bwim.iml
+.idea/torch-bwim.iml

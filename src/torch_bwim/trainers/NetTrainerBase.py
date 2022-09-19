@@ -69,6 +69,7 @@ class NetTrainerBase(object):
     def save(self, persist_config: PersistConfig, with_weights=True):
         if (persist_config is None) or (not PersistHelper.valid_path(persist_config.folder_path)):
             return False
+        PersistHelper.create_dir_if_not_exists(persist_config.folder_path)
         PersistHelper.save_object_to_json(self.train_config, path=PersistHelper.merge_paths([
             persist_config.folder_path, persist_config.train_config_file
         ]))
