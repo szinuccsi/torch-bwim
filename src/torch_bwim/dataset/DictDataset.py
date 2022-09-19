@@ -26,7 +26,6 @@ class DictDataset(object):
         return inputs
 
     def __getitem__(self, index):
-        index = index % len(self)
         inputs = self._get_input(index)
         res = (index,) + inputs
         return res
