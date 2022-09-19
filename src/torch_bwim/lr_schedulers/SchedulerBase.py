@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from persistance_helper.SerializableAlg import SerializableAlg
 from torch_bwim.optimizers.OptimizerFactoryBase import OptimizerFactoryBase
@@ -13,6 +15,10 @@ class SchedulerBase(SerializableAlg):
 
         def get_scheduler_type(self):
             raise RuntimeError(f'Invalid scheduler type (SchedulerBase)')
+
+    class PersistConfig(SerializableAlg.PersistConfig):
+        def __init__(self, filename: Optional[str] = None):
+            super().__init__(filename=filename if filename is not None else 'scheduler.json')
 
     def __init__(self, config: Config, optimizer, optimizer_config: OptimizerFactoryBase.Config):
         super().__init__()

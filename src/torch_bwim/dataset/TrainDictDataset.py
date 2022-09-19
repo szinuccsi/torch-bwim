@@ -22,6 +22,7 @@ class TrainDictDataset(DictDataset):
         return labels
 
     def __getitem__(self, index):
+        index = index % len(self)
         inputs = self._get_input(index)
         labels = self._get_label(index)
         if self.data_augmentation_converter is not None:

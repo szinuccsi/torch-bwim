@@ -8,7 +8,6 @@ from persistance_helper.Version import Version
 from torch_bwim.helpers.RandomHelper import RandomHelper
 
 
-
 class NetBase(nn.Module):
 
     class Config(object):
@@ -46,7 +45,7 @@ class NetBase(nn.Module):
     def save_net(self, folder_path: str, persist_config: PersistConfig=None, weights=True):
         if persist_config is None:
             persist_config = self.PersistConfig()
-        self._check_persist_config(folder_path=folder_path, persist_config=persist_config)
+        self.check_persist_config(folder_path=folder_path, persist_config=persist_config)
         PersistHelper.save_object_to_json(
             data=self.config,
             path=PersistHelper.merge_paths([folder_path, persist_config.nn_config_filename])
@@ -61,7 +60,7 @@ class NetBase(nn.Module):
     def load_net(cls, folder_path: str, persist_config: PersistConfig=None, weights=True):
         if persist_config is None:
             persist_config = cls.PersistConfig()
-        cls._check_persist_config(folder_path=folder_path, persist_config=persist_config)
+        cls.check_persist_config(folder_path=folder_path, persist_config=persist_config)
         net_config = PersistHelper.load_json_to_object(
             path=PersistHelper.merge_paths([folder_path, persist_config.nn_config_filename])
         )

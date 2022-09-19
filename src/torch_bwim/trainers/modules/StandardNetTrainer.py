@@ -74,9 +74,9 @@ class StandardNetTrainer(NetTrainerBase):
                    cuda: bool=True,
                    loss_plotter=None, learning_rate_plotter=None):
         self.net = net if not cuda else net.cuda()
+        self.dataset_provider: TrainDictDataset = dataset_provider
         self.train_loader = self.dataset_to_loader(train_dataset)
         self.val_loader = self.dataset_to_loader(val_dataset)
-        self.dataset_provider: TrainDictDataset = dataset_provider
         self.loss_function = loss_function
         self.loss_plotter = \
             loss_plotter if loss_plotter is not None else LossPlotter()

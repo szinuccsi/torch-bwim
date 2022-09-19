@@ -10,5 +10,5 @@ class DatasetMapperWithLambda(DatasetMapper):
         super().__init__()
         self._key_of_sample = key_of_sample
 
-    def key_of_sample(self, dataset: Dataset, full_dataset: DictDataset, index):
-        return self._key_of_sample(dataset, full_dataset, index)
+    def key_of_sample(self, dataset: Dataset, full_dataset: DictDataset, data):
+        return self._key_of_sample(dataset, full_dataset, data)
