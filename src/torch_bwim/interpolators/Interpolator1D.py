@@ -26,8 +26,9 @@ class Interpolator1D(nn.Module):
         self._right: Optional[nn.Parameter] = None
         self.postprocess(fp=fp)
 
-    def preprocess(self, fp: torch.Tensor, xp: torch.Tensor,
-                                  grad_fp: Optional[torch.Tensor]):
+    @classmethod
+    def preprocess(cls, fp: torch.Tensor, xp: torch.Tensor,
+                   grad_fp: Optional[torch.Tensor]):
         with torch.no_grad():
             fp = fp.unsqueeze(-1) if len(fp.shape) == 1 else fp
             grad_fp = Interpolator1DFunction.gradient_create(xp=xp, fp=fp) \
@@ -40,6 +41,11 @@ class Interpolator1D(nn.Module):
             self._left = nn.Parameter(torch.select(fp, dim=0, index=0))
             self._right = nn.Parameter(torch.select(fp, dim=0, index=-1))
 
+    '''
+        x: shape(batch_size)
+        left: shape(function cnt)
+        right: shape(function cnt)
+    '''
     def forward(self, x, left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None):
         left = self._left if left is None else left
         right = self._right if right is None else right
@@ -63,4 +69,22 @@ class Interpolator1D(nn.Module):
         return Interpolator1D(
             xp=NnModuleUtils.from_array(xp), fp=NnModuleUtils.from_array(fp),
             grad_fp=NnModuleUtils.from_array(fp_deriv) if fp_deriv is not None else None
+        )
+
+    '''
+        x: shape(batch_size)
+        left: shape(function cnt)
+        right: shape(function cnt)
+        xp: shape(num of control points)
+        fp: shape(num of control points) | shape(num of control points; function cnt)
+        grad_fp: shape(num of control points, Optional[function cnt])
+    '''
+    @classmethod
+    def interpolate(cls, x: torch.Tensor, xp: torch.Tensor, fp: torch.Tensor,
+                    left: Optional[torch.Tensor] = None, right: Optional[torch.Tensor] = None,
+                    grad_fp: Optional[torch.Tensor] = None):
+        fp, grad_fp = cls.preprocess(fp=fp, xp=xp, grad_fp=grad_fp)
+        return Interpolator1DFunction.apply(
+            x, xp, fp,
+            left, right, grad_fp
         )

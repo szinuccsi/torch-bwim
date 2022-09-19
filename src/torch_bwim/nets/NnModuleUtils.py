@@ -32,12 +32,16 @@ class NnModuleUtils(object):
 
     @classmethod
     def from_array(cls, arr, dtype=np.float32, cuda=None):
+        if isinstance(arr, torch.Tensor):
+            return cls.to_cuda(arr, cuda=cuda)
         t = NnModuleUtils.from_numpy(np.asarray(arr), dtype=dtype)
         t = t if cuda is None else NnModuleUtils.to_cuda(t, cuda=cuda)
         return t
 
     @classmethod
     def from_nontensor(cls, val, dtype=np.float32, cuda: Optional[bool]=None):
+        if isinstance(val, torch.Tensor):
+            return cls.to_cuda(val, cuda=cuda)
         if isinstance(val, list) or isinstance(val, np.ndarray):
             return NnModuleUtils.from_array(arr=val, dtype=dtype, cuda=cuda)
         t = torch.tensor(val)
@@ -70,6 +74,8 @@ class NnModuleUtils(object):
 
     @classmethod
     def to_cuda(cls, t: torch.Tensor, cuda=True):
+        if cuda is None:
+            return t
         if (not isinstance(t, list)) and (not isinstance(t, tuple)):
             return t.cuda() if cls.cuda_is_available(cuda=cuda) else t
         if not isinstance(cuda, list):
