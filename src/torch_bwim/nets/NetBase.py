@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from persistance_helper.PersistHelper import PersistHelper
@@ -24,7 +26,7 @@ class NetBase(nn.Module):
         def get_latest_version(cls):
             return Version(0, 1, 0)
 
-    def __init__(self, config: Config, random_state=None):
+    def __init__(self, config: Config, random_state: Optional[int] = None):
         super().__init__()
         self.config = config
         RandomHelper.set_random_state(random_state=random_state)
