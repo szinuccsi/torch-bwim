@@ -21,7 +21,7 @@ class SchedulerBase(SerializableAlg):
             super().__init__(filename=filename if filename is not None else 'scheduler.json')
 
     def __init__(self, config: Config, optimizer, optimizer_config: OptimizerFactoryBase.Config):
-        super().__init__()
+        super().__init__(config=config)
         self.config = config
         self.optimizer = optimizer
         self.optimizer_config = optimizer_config
